@@ -123,12 +123,21 @@ Word, hint, mastered status, attempts.
 #### No Backend
 Rely entirely on client-side storage.
 
-### 4.3. Text-to-Speech 🔄
+### 4.3. Text-to-Speech ✅
 #### API
 Use ElevenLabs API for word pronunciation and feedback sounds.
 
+#### Voice Selection 🔄
+Implemented voice selection feature allowing users to choose their preferred voice from available ElevenLabs voices. The selected voice is stored in localStorage for persistence across sessions.
+
 #### Optimization
 Cache common audio responses locally (e.g., "Great!") to reduce API calls.
+
+#### Error Handling
+Implemented robust error handling for audio playback with fallback to browser's Speech Synthesis API when ElevenLabs API is unavailable or for shorter words.
+
+#### Persistent Audio Element
+Fixed audio playback interruption issues by using a persistent audio element that remains in the DOM throughout component lifecycle, preventing the "The play() request was interrupted because the media was removed from the document" error.
 
 ### 4.4. URL and Sharing
 #### Generation

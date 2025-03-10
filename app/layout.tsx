@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Bubblegum_Sans } from "next/font/google";
 import "./globals.css";
+import { FooterWrapper } from "@/app/ui/FooterWrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,8 +38,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${bubblegumSans.variable} antialiased bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-950 dark:to-indigo-950 min-h-screen`}
       >
-        <div className="container mx-auto px-4 py-8 max-w-6xl">
-          {children}
+        <div className="container mx-auto px-4 py-8 max-w-6xl flex flex-col min-h-screen">
+          <div className="flex-grow">
+            {children}
+          </div>
+          <FooterWrapper />
         </div>
       </body>
     </html>
