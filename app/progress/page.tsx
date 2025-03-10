@@ -56,7 +56,7 @@ export default function ProgressPage() {
                   <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
                     <p className="text-lg mb-6">You don't have any Wordles yet!</p>
                     <Link href="/wordlist/create">
-                      <Button data-color="green" className="text-white">
+                      <Button color="green" className="text-white">
                         Create Your First Wordle
                       </Button>
                     </Link>
@@ -78,13 +78,13 @@ export default function ProgressPage() {
       
       <div className="flex gap-4 mt-8">
         <Link href="/">
-          <Button data-color="blue" className="font-[family-name:var(--font-bubblegum-sans)]">
+          <Button color="blue" className="font-[family-name:var(--font-bubblegum-sans)]">
             Back to Home
           </Button>
         </Link>
         
         <Link href="/game">
-          <Button data-color="green" className="font-[family-name:var(--font-bubblegum-sans)]">
+          <Button color="green" className="font-[family-name:var(--font-bubblegum-sans)]">
             Play Wordles
           </Button>
         </Link>

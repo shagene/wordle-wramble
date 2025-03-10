@@ -52,7 +52,7 @@ export function WordListProgress({ wordList, listProgress }: WordListProgressPro
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-bold">{wordList.name}</h3>
         <Link href={`/game?listId=${wordList.id}`}>
-          <Button data-color="blue" className="text-sm py-1 px-3">
+          <Button color="amber" className="text-sm py-1 px-3">
             Practice
           </Button>
         </Link>
