@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useGameContext } from '../game/context/GameContext';
 import { LetterTile, HintButton } from '.';
+import { useRouter } from 'next/navigation';
 import { 
   textToSpeech, 
   isApiKeySet, 
@@ -35,6 +37,7 @@ export const WordleGame = ({
   isDemo = false,
   onComplete
 }: WordleGameProps): ReactElement => {
+  const router = useRouter();
   // Create a persistent audio element reference
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
@@ -82,7 +85,7 @@ export const WordleGame = ({
   const MAX_ATTEMPTS = 3;
 
   // Game state
-  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const { currentWordIndex, setCurrentWordIndex } = useGameContext();
   const [currentWord, setCurrentWord] = useState(words[0]);
   const [scrambledLetters, setScrambledLetters] = useState<string[]>([]);
   const [userArrangement, setUserArrangement] = useState<string[]>([]);
@@ -607,7 +610,7 @@ export const WordleGame = ({
           </div>
         )}
         
-        <div className="mt-6">
+        <div className="mt-6 flex gap-4 justify-center">
           <Button
             onClick={() => {
               // Reset game state
@@ -628,6 +631,14 @@ export const WordleGame = ({
             className="text-white px-6 py-2"
           >
             Play Again
+          </Button>
+          
+          <Button
+            onClick={() => router.push('/progress')}
+            color="amber"
+            className="text-white px-6 py-2"
+          >
+            See Progress
           </Button>
         </div>
       </div>

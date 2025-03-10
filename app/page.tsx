@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Header, Footer, NavButton, WordleGame } from "./ui";
+import { GameProvider } from "./game/context/GameContext";
 
 export default function Home() {
   return (
@@ -49,10 +50,12 @@ export default function Home() {
       <div className="relative w-full max-w-xs md:max-w-md mx-auto mb-8 animate-in fade-in duration-1000 delay-500">
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-yellow-400 to-pink-500 rounded-full filter blur-3xl opacity-20 animate-pulse"></div>
         <div className="relative z-10">
-          <WordleGame 
-            words={['CAT', 'DOG', 'SUN']} 
-            isDemo={true} 
-          />
+          <GameProvider>
+            <WordleGame 
+              words={['CAT', 'DOG', 'SUN']} 
+              isDemo={true} 
+            />
+          </GameProvider>
         </div>
       </div>
 
