@@ -375,7 +375,12 @@ export function WordleGame({
       {/* Voice selection info - only shown when API key is set and not in results screen */}
       {isApiKeySet() && !allWordsCompleted && (
         <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
-          <p>You can change the voice used for pronunciation using the voice selector above.</p>
+          <p>
+            {isDemo
+              ? 'In the full game, you can play pronunciations and choose different voices using the selector above.'
+              : 'You can change the voice used for pronunciation using the voice selector above.'
+            }
+          </p>
         </div>
       )}
     </div>
