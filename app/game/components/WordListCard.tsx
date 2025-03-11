@@ -42,7 +42,11 @@ export function WordListCard({ list, onClick, onDelete }: WordListCardProps) {
       <div className="mt-4 flex flex-wrap gap-2">
         {list.words.slice(0, 3).map((word, index) => (
           <span key={index} className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded text-sm">
-            {word}
+            {typeof word === 'object' && word !== null ? 
+              // Use a more specific type instead of any
+              (word as { word: string }).word : 
+              String(word)
+            }
           </span>
         ))}
         {list.words.length > 3 && (
