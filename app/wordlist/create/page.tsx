@@ -27,6 +27,17 @@ export default function CreateWordListPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   
+  // Get the noLists parameter from the URL
+  const [noLists, setNoLists] = useState(false);
+  
+  useEffect(() => {
+    // Check if we're in the browser and get the query parameter
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      setNoLists(params.get('noLists') === 'true');
+    }
+  }, []);
+  
   // Initialize form with react-hook-form
   const { register, control, handleSubmit, formState: { errors } } = useForm<WordListFormValues>({
     resolver: zodResolver(wordListSchema),
@@ -54,9 +65,10 @@ export default function CreateWordListPage() {
         // Get existing word lists or initialize an empty array
         const existingLists = JSON.parse(localStorage.getItem('wordLists') || '[]');
         
-        // Create new word list object
+        // Create new word list object with unique ID
+        const newListId = Date.now().toString();
         const newList = {
-          id: Date.now().toString(),
+          id: newListId,
           name: data.name,
           words: data.words.map(w => w.word),
           hints: data.words.map(w => w.hint || ''),
@@ -65,6 +77,15 @@ export default function CreateWordListPage() {
         
         // Save updated lists back to localStorage
         localStorage.setItem('wordLists', JSON.stringify([...existingLists, newList]));
+        
+        // Initialize progress tracking for this list
+        try {
+          const progressData = JSON.parse(localStorage.getItem('wordleProgress') || '{}');
+          progressData[newListId] = { completed: 0, attempts: 0 };
+          localStorage.setItem('wordleProgress', JSON.stringify(progressData));
+        } catch (error) {
+          console.error('Error initializing progress tracking:', error);
+        }
         
         setIsSaving(false);
         setSaveSuccess(true);
@@ -178,9 +199,9 @@ export default function CreateWordListPage() {
           </div>
           
           <div className="flex gap-4 justify-center mt-8">
-            <Link href="/game">
+            <Link href={noLists ? "/" : "/game"}>
               <Button outline className="text-blue-600 hover:text-blue-700">
-                Cancel
+                {noLists ? "Back to Home" : "Cancel"}
               </Button>
             </Link>
             

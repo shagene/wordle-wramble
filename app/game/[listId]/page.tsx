@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
-import { Heading } from "../../components/heading";
 import { WordleGame } from "../../ui";
 import { Button } from "../../components/button";
 import { WordList } from '../types';
@@ -67,12 +66,26 @@ function GamePageContent({ params }: GamePageProps) {
         // Get existing progress or initialize empty object
         const progress = JSON.parse(localStorage.getItem('wordleProgress') || '{}');
         
-        // Update progress for this list and word
+        // Initialize list progress if it doesn't exist
         if (!progress[wordList.id]) {
-          progress[wordList.id] = {};
+          progress[wordList.id] = { completed: 0, attempts: 0 };
         }
         
-        progress[wordList.id][word] = {
+        // Track individual word completion
+        if (!progress[wordList.id].words) {
+          progress[wordList.id].words = {};
+        }
+        
+        // Only count as completed if it wasn't already completed
+        if (!progress[wordList.id].words[word] || !progress[wordList.id].words[word].completed) {
+          progress[wordList.id].completed += 1;
+        }
+        
+        // Always increment attempts
+        progress[wordList.id].attempts += 1;
+        
+        // Store details for this specific word
+        progress[wordList.id].words[word] = {
           completed: true,
           attempts,
           timestamp: new Date().toISOString()

@@ -27,9 +27,9 @@ function GamePageContent() {
           
           setWordLists(savedLists);
           
-          // If no lists exist, redirect to add words page
+          // If no lists exist, redirect to add words page with query parameter
           if (savedLists.length === 0) {
-            router.push('/wordlist/create');
+            router.push('/wordlist/create?noLists=true');
           }
         }
         
@@ -66,8 +66,8 @@ function GamePageContent() {
         </div>
       ) : wordLists.length === 0 ? (
         <div className="text-center py-8 max-w-md mx-auto">
-          <p className="text-lg mb-6">You don't have any word lists yet!</p>
-          <Link href="/wordlist/create">
+          <p className="text-lg mb-6">You don&apos;t have any word lists yet!</p>
+          <Link href="/wordlist/create?noLists=true">
             <Button color="green" className="text-white">
               Create Your First List
             </Button>

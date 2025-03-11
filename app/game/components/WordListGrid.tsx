@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { WordList } from '../types';
 import { WordListCard } from './WordListCard';
 
@@ -9,7 +10,20 @@ type WordListGridProps = {
   onSelectList: (list: WordList) => void;
 };
 
-export function WordListGrid({ wordLists, onSelectList }: WordListGridProps) {
+export function WordListGrid({ wordLists: initialWordLists, onSelectList }: WordListGridProps) {
+  // Maintain local state for word lists
+  const [wordLists, setWordLists] = useState<WordList[]>(initialWordLists);
+
+  // Update local state when props change
+  useEffect(() => {
+    setWordLists(initialWordLists);
+  }, [initialWordLists]);
+
+  // Handle deletion of a word list
+  const handleDelete = (id: string) => {
+    setWordLists(prevLists => prevLists.filter(list => list.id !== id));
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mx-auto p-4">
       {wordLists.map((list) => (
@@ -17,6 +31,7 @@ export function WordListGrid({ wordLists, onSelectList }: WordListGridProps) {
           key={list.id} 
           list={list} 
           onClick={onSelectList}
+          onDelete={handleDelete}
         />
       ))}
       
