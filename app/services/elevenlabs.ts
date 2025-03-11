@@ -1,37 +1,16 @@
 // ElevenLabs API service for text-to-speech functionality
 
-// This is the API key that will be used to authenticate with the ElevenLabs API
-// In a production environment, this should be stored in environment variables
+// API key for ElevenLabs
 let apiKey: string | null = process.env.NEXT_PUBLIC_ELEVEN_LABS_API_KEY || null;
 
-// Initialize from localStorage if available (client-side only)
-if (typeof window !== 'undefined') {
-  try {
-    const storedKey = localStorage.getItem('elevenLabsApiKey');
-    if (storedKey) {
-      apiKey = storedKey;
-      console.log('ElevenLabs API key loaded from localStorage');
-    } else if (apiKey) {
-      console.log('ElevenLabs API key loaded from environment variable');
-    } else {
-      console.warn('No ElevenLabs API key found');
-    }
-  } catch (error) {
-    console.error('Error accessing localStorage:', error);
-  }
-}
-
-// Cache for storing audio data to avoid unnecessary API calls
-const audioCache: Record<string, string> = {};
-
-// Voice interface and available voices
+// Voice interface
 export interface Voice {
   voice_id: string;
   name: string;
   preview_url?: string;
 }
 
-// Default available voices (will be replaced when fetched from API)
+// Default available voices
 let availableVoices: Voice[] = [
   { voice_id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel (Child-friendly)' },
   { voice_id: 'AZnzlk1XvdvUeBnXmlld', name: 'Domi' },
@@ -50,13 +29,21 @@ let selectedVoiceId: string = '21m00Tcm4TlvDq8ikWAM';
 // Initialize from localStorage if available (client-side only)
 if (typeof window !== 'undefined') {
   try {
-    const storedVoice = localStorage.getItem('elevenLabsSelectedVoice');
+    const storedKey = localStorage.getItem('elevenlabs-api-key');
+    if (storedKey) {
+      apiKey = storedKey;
+      console.log('Loaded API key from localStorage');
+    }
+    
+    const storedVoice = localStorage.getItem('elevenlabs-selected-voice');
     if (storedVoice) {
+      console.log(`Loading voice ID from localStorage: ${storedVoice}`);
       selectedVoiceId = storedVoice;
-      console.log('ElevenLabs selected voice loaded from localStorage:', selectedVoiceId);
+    } else {
+      console.log('No voice ID found in localStorage, using default');
     }
   } catch (error) {
-    console.error('Error accessing localStorage for voice selection:', error);
+    console.error('Error accessing localStorage:', error);
   }
 }
 
@@ -64,21 +51,25 @@ if (typeof window !== 'undefined') {
  * Set the API key for ElevenLabs
  * @param key - The API key from ElevenLabs
  */
-export const setElevenLabsApiKey = (key: string) => {
+export const setElevenLabsApiKey = (key: string): boolean => {
   apiKey = key;
   
   // Save to localStorage for persistence
   if (typeof window !== 'undefined') {
     try {
-      localStorage.setItem('elevenLabsApiKey', key);
-      console.log('ElevenLabs API key saved to localStorage');
+      localStorage.setItem('elevenlabs-api-key', key);
+      console.log('Saved API key to localStorage');
     } catch (error) {
       console.error('Error saving API key to localStorage:', error);
     }
   }
   
   // When API key is set, try to fetch available voices
-  fetchVoices().catch(err => console.error('Failed to fetch voices:', err));
+  fetchVoices().then(voices => {
+    console.log(`Fetched ${voices.length} voices after setting API key`);
+  }).catch(error => {
+    console.error('Error fetching voices after setting API key:', error);
+  });
   
   return isApiKeySet();
 };
@@ -88,14 +79,8 @@ export const setElevenLabsApiKey = (key: string) => {
  * @returns boolean indicating if the API key is set
  */
 export const isApiKeySet = (): boolean => {
-  const keyIsValid = apiKey !== null && apiKey.trim() !== '';
-  if (!keyIsValid) {
-    console.warn('ElevenLabs API key is not set or is invalid');
-  }
-  return keyIsValid;
+  return apiKey !== null && apiKey.trim() !== '';
 };
-
-
 
 /**
  * Fetch available voices from ElevenLabs API
@@ -104,7 +89,6 @@ export const isApiKeySet = (): boolean => {
 export const fetchVoices = async (): Promise<Voice[]> => {
   // Check if API key is set
   if (!isApiKeySet()) {
-    console.error('ElevenLabs API key is not set');
     return availableVoices; // Return default voices if API key is not set
   }
 
@@ -117,22 +101,41 @@ export const fetchVoices = async (): Promise<Voice[]> => {
     });
 
     if (!response.ok) {
-      throw new Error(`ElevenLabs API error: ${response.statusText}`);
+      return availableVoices;
     }
 
     const data = await response.json();
+    
     if (data.voices && Array.isArray(data.voices)) {
       // Update available voices with fetched data
-      availableVoices = data.voices.map((voice: any) => ({
+      const fetchedVoices = data.voices.map((voice: any) => ({
         voice_id: voice.voice_id,
         name: voice.name,
         preview_url: voice.preview_url
       }));
+      
+      // Update the available voices
+      availableVoices = fetchedVoices;
+      
+      // Check if the currently selected voice is still valid
+      const voiceStillExists = availableVoices.some(voice => voice.voice_id === selectedVoiceId);
+      if (!voiceStillExists && availableVoices.length > 0) {
+        // If not, update to the first available voice
+        selectedVoiceId = availableVoices[0].voice_id;
+        
+        // Save to localStorage
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('elevenLabsSelectedVoice', selectedVoiceId);
+          } catch (e) {
+            console.error('Error saving voice ID to localStorage');
+          }
+        }
+      }
     }
 
     return availableVoices;
   } catch (error) {
-    console.error('Error fetching voices:', error);
     return availableVoices; // Return default voices on error
   }
 };
@@ -156,23 +159,32 @@ export const setSelectedVoice = (voiceId: string): boolean => {
   
   if (!voiceExists) {
     console.warn(`Voice ID ${voiceId} not found in available voices`);
-    return false;
+    
+    // If we have voices but the requested one isn't valid, use the first available
+    if (availableVoices.length > 0) {
+      const defaultVoice = availableVoices[0].voice_id;
+      console.log(`Using default voice instead: ${defaultVoice}`);
+      voiceId = defaultVoice;
+    } else {
+      console.error('No voices available to select from');
+      return false;
+    }
   }
   
+  // Update the selected voice ID
   selectedVoiceId = voiceId;
+  console.log(`Voice selected in service: ${voiceId}`);
   
   // Save to localStorage for persistence
   if (typeof window !== 'undefined') {
     try {
-      localStorage.setItem('elevenLabsSelectedVoice', voiceId);
-      console.log('Selected voice saved to localStorage');
+      localStorage.removeItem('elevenlabs-selected-voice');
+      localStorage.setItem('elevenlabs-selected-voice', voiceId);
+      console.log(`Saved voice ID to localStorage: ${voiceId}`);
     } catch (error) {
-      console.error('Error saving selected voice to localStorage:', error);
+      console.error('Error saving voice to localStorage:', error);
     }
   }
-  
-  // Clear audio cache when voice changes
-  clearAudioCache();
   
   return true;
 };
@@ -186,310 +198,167 @@ export const getSelectedVoice = (): string => {
 };
 
 /**
- * Convert text to speech using the ElevenLabs API
+ * Convert text to speech using browser speech synthesis as primary method
  * @param text - The text to convert to speech
- * @param voiceId - The voice ID to use (defaults to the selected voice)
- * @param forceElevenLabs - If true, always use ElevenLabs API even for short words
- * @returns Promise with the audio URL or null if there was an error
+ * @param voiceId - The voice ID to use (only used if fallback to ElevenLabs)
+ * @param forceElevenLabs - If true, try ElevenLabs API instead of browser speech
+ * @returns Promise with 'browser-tts' for browser TTS or audio URL for ElevenLabs, or null if error
  */
 export const textToSpeech = async (
   text: string,
-  voiceId: string = selectedVoiceId, // Use the selected voice ID
-  forceElevenLabs: boolean = false // Default to allowing browser TTS for short words
+  voiceId: string = selectedVoiceId,
+  forceElevenLabs: boolean = false
 ): Promise<string | null> => {
-  // Normalize and validate the input text
-  if (!text || text.trim() === '') {
-    console.error('Empty text provided to textToSpeech');
-    return null;
-  }
-  
-  // Uppercase for consistent caching and better pronunciation
+  // Uppercase for consistent pronunciation
   const normalizedText = text.trim().toUpperCase();
   
-  // Check if we have a cached version
-  const cacheKey = `${normalizedText}-${voiceId}`;
-  if (audioCache[cacheKey]) {
-    console.log(`Using cached audio for: ${normalizedText}`);
-    return audioCache[cacheKey];
-  }
-
-  // Check if API key is set
-  if (!isApiKeySet()) {
-    console.error('ElevenLabs API key is not set');
-    return null;
+  // SIMPLIFIED APPROACH: Always use browser speech synthesis unless forced to use ElevenLabs
+  if (!forceElevenLabs && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    console.log(`Using browser speech synthesis for word: ${normalizedText}`);
+    
+    try {
+      // Always cancel any ongoing speech first
+      window.speechSynthesis.cancel();
+      
+      // Create an utterance
+      const utterance = new SpeechSynthesisUtterance(normalizedText);
+      
+      // Set properties for better playback
+      utterance.rate = 0.8;   // Slightly slower for clarity
+      utterance.pitch = 1.0;  // Normal pitch
+      utterance.volume = 1.0; // Maximum volume
+      
+      // Set language explicitly to English
+      utterance.lang = 'en-US';
+      
+      // Get available voices and select a good one
+      const voices = window.speechSynthesis.getVoices();
+      
+      // If we have voices, try to find an English one
+      if (voices && voices.length > 0) {
+        const englishVoice = voices.find(voice => 
+          voice.lang.includes('en-') && voice.name.includes('Female'));
+        
+        if (englishVoice) {
+          utterance.voice = englishVoice;
+          console.log(`Using voice: ${englishVoice.name}`);
+        }
+      }
+      
+      // Add event handlers for debugging
+      utterance.onstart = () => console.log('Browser speech started for:', normalizedText);
+      utterance.onend = () => console.log('Browser speech ended for:', normalizedText);
+      utterance.onerror = (event) => console.error('Browser speech error:', event.error);
+      
+      // Start speaking
+      window.speechSynthesis.speak(utterance);
+      
+      // Chrome sometimes pauses speech synthesis when the tab is in background
+      // This is a workaround to keep it going
+      if (navigator.userAgent.includes('Chrome')) {
+        const resumeTimeout = () => {
+          window.speechSynthesis.pause();
+          window.speechSynthesis.resume();
+        };
+        
+        // Resume every 250ms to prevent Chrome from pausing
+        const intervalId = setInterval(resumeTimeout, 250);
+        
+        // Clear the interval when speech ends
+        utterance.onend = () => {
+          clearInterval(intervalId);
+          console.log('Browser speech ended for:', normalizedText);
+        };
+        
+        // Also clear on error
+        utterance.onerror = (event) => {
+          clearInterval(intervalId);
+          console.error('Browser speech error:', event.error);
+        };
+      }
+      
+      return 'browser-tts'; // Special marker to indicate browser TTS was used
+    } catch (browserError) {
+      console.error('Browser speech synthesis error:', browserError);
+      // Fall through to ElevenLabs API if forceElevenLabs is true
+    }
   }
   
-  console.log(`Making ElevenLabs API call for text: ${normalizedText}`);
-  console.log(`Using voice ID: ${voiceId}`);
-  console.log(`API key is set: ${apiKey ? 'Yes' : 'No'}`);
-  console.log(`API key length: ${apiKey?.length || 0}`);
-  
-  // For debugging only - show first and last character of API key
-  if (apiKey && apiKey.length > 5) {
-    const firstChar = apiKey.charAt(0);
-    const lastChar = apiKey.charAt(apiKey.length - 1);
-    console.log(`API key starts with ${firstChar} and ends with ${lastChar}`);
-  }
-
-  try {
-    // For simple words, try browser speech synthesis first (unless forceElevenLabs is true)
-    if (!forceElevenLabs && normalizedText.length <= 5 && typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      console.log(`Attempting browser speech synthesis for short word: ${normalizedText}`);
+  // Only try ElevenLabs if explicitly forced and API key is set
+  if (forceElevenLabs && isApiKeySet()) {
+    console.log(`Attempting ElevenLabs API for word: ${normalizedText}`);
+    
+    try {
+      // Make sure we have a valid voice ID
+      if (!voiceId) {
+        voiceId = '21m00Tcm4TlvDq8ikWAM'; // Rachel (Child-friendly)
+      }
       
-      // Check if we have voices available immediately
-      const initialVoices = window.speechSynthesis.getVoices();
-      console.log(`Initial voices check: ${initialVoices.length} voices available`);
+      // Verify the voice ID exists in available voices
+      const voiceExists = availableVoices.some(voice => voice.voice_id === voiceId);
+      if (!voiceExists && availableVoices.length > 0) {
+        voiceId = availableVoices[0].voice_id;
+      }
       
-      // If no voices are available immediately and we're on Chrome, we might need to wait
-      // But if we're on Safari or Firefox and have 0 voices, it likely means speech synthesis isn't working
-      const isChrome = navigator.userAgent.indexOf('Chrome') > -1;
+      // According to latest ElevenLabs API docs
+      const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
       
-      // Skip browser TTS if we have no voices and aren't on Chrome (likely won't work)
-      if (initialVoices.length === 0 && !isChrome) {
-        console.log('No voices available and not on Chrome - skipping browser TTS');
-      } else {
-        try {
-          // Function to safely get voices and speak
-          const speakWithVoices = () => {
-            try {
-              // Cancel any ongoing speech
-              window.speechSynthesis.cancel();
-              
-              // Create an utterance
-              const utterance = new SpeechSynthesisUtterance(normalizedText);
-              
-              // Set properties for better playback
-              utterance.rate = 0.85; // Slightly slower
-              utterance.pitch = 1.0;  // Normal pitch
-              utterance.volume = 1.0; // Maximum volume
-              
-              // Simple event handlers without accessing error properties
-              utterance.onstart = () => console.log('Browser speech started');
-              utterance.onend = () => console.log('Browser speech ended');
-              utterance.onerror = () => console.log('Browser speech error');
-              
-              // Get available voices and select a good one
-              const voices = window.speechSynthesis.getVoices();
-              console.log(`Found ${voices.length} voices`);
-              
-              // If we still don't have voices, we should skip browser TTS
-              if (voices.length === 0) {
-                console.log('No voices available after waiting - skipping browser TTS');
-                throw new Error('No voices available for speech synthesis');
-              }
-              
-              // Try to find an English voice
-              const englishVoice = voices.find(voice => 
-                voice.lang.includes('en-')
-              );
-              if (englishVoice) {
-                utterance.voice = englishVoice;
-                console.log('Using voice:', englishVoice.name);
-              }
-              
-              // Start speaking
-              window.speechSynthesis.speak(utterance);
-              console.log('Speech request sent for:', normalizedText);
-              
-              // Cache and return the special marker
-              audioCache[cacheKey] = 'browser-tts';
-              return true; // Success
-            } catch (innerError) {
-              console.log('Error in speakWithVoices:', innerError);
-              return false; // Failed
-            }
-          };
-          
-          // Check if voices are already loaded
-          const voices = window.speechSynthesis.getVoices();
-          if (voices.length > 0) {
-            // Voices already loaded, speak immediately
-            const success = speakWithVoices();
-            if (success) {
-              return 'browser-tts'; // Special marker to indicate browser TTS was used
-            }
-          } else {
-            // Wait for voices to load
-            console.log('Waiting for voices to load...');
-            
-            // Create a promise that resolves when voices are loaded or times out
-            const voicesPromise = new Promise<boolean>((resolve) => {
-              // Set up the voices changed handler
-              window.speechSynthesis.onvoiceschanged = () => {
-                console.log('Voices loaded, now speaking');
-                const success = speakWithVoices();
-                window.speechSynthesis.onvoiceschanged = null;
-                resolve(success);
-              };
-              
-              // Set a timeout in case onvoiceschanged never fires
-              setTimeout(() => {
-                if (window.speechSynthesis.onvoiceschanged) {
-                  console.log('Voices timeout reached, trying anyway');
-                  const success = speakWithVoices();
-                  window.speechSynthesis.onvoiceschanged = null;
-                  resolve(success);
-                }
-              }, 1000);
-            });
-            
-            // Wait for the promise to resolve
-            const success = await voicesPromise;
-            if (success) {
-              return 'browser-tts'; // Special marker to indicate browser TTS was used
-            }
+      // Prepare request options according to the latest docs
+      const requestOptions = {
+        method: 'POST',
+        headers: {
+          'Accept': 'audio/mpeg',  // Request MP3 format for better compatibility
+          'Content-Type': 'application/json',
+          'xi-api-key': apiKey as string,
+        },
+        body: JSON.stringify({
+          text: normalizedText,
+          model_id: 'eleven_monolingual_v1',  // Use monolingual model for English
+          voice_settings: {
+            stability: 0.6,  // Slightly higher stability for clearer pronunciation
+            similarity_boost: 0.75,  // Higher similarity for better voice quality
+            style: 0.0,  // Neutral style
+            use_speaker_boost: true  // Enable speaker boost for clearer audio
           }
-        } catch (browserError) {
-          console.error('Error with browser speech synthesis:', browserError);
-          // Fall through to ElevenLabs API
-        }
+        }),
+      };
+      
+      const response = await fetch(url, requestOptions);
+      
+      // Handle HTTP errors
+      if (!response.ok) {
+        console.error(`ElevenLabs API error: ${response.status}`);
+        return null;
       }
       
-      console.log('Browser speech synthesis failed or skipped, falling back to ElevenLabs');
-    }
-    
-    // For longer words or when browser speech synthesis is not available, use ElevenLabs API
-    console.log('Sending request to ElevenLabs API...');
-    
-    // According to latest ElevenLabs API docs
-    const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
-    
-    // Prepare request options according to the latest docs
-    const requestOptions = {
-      method: 'POST',
-      headers: {
-        'Accept': 'audio/mpeg',  // Request MP3 format for better compatibility
-        'Content-Type': 'application/json',
-        'xi-api-key': apiKey as string,
-      },
-      body: JSON.stringify({
-        text: normalizedText,
-        model_id: 'eleven_monolingual_v1',  // Use monolingual model for English
-        voice_settings: {
-          stability: 0.6,  // Slightly higher stability for clearer pronunciation
-          similarity_boost: 0.75,  // Higher similarity for better voice quality
-          style: 0.0,  // Neutral style
-          use_speaker_boost: true  // Enable speaker boost for clearer audio
-        }
-      }),
-    };
-    
-    const response = await fetch(url, requestOptions);
-    
-    // Handle HTTP errors
-    if (!response.ok) {
-      // Try to get the error details
-      let errorDetails = 'Unknown error';
-      try {
-        const errorData = await response.json();
-        errorDetails = JSON.stringify(errorData);
-      } catch (e) {
-        try {
-          errorDetails = await response.text();
-        } catch (e2) {
-          errorDetails = `Status: ${response.status} ${response.statusText}`;
-        }
+      // Check if the response actually contains audio data
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('audio/')) {
+        console.error(`Unexpected content type: ${contentType}`);
+        return null;
       }
       
-      console.error(`ElevenLabs API error: ${response.status} ${response.statusText}`);
-      console.error('Error details:', errorDetails);
-      throw new Error(`ElevenLabs API error: ${response.status} ${response.statusText}`);
-    }
-    
-    console.log('ElevenLabs API response received successfully');
-    
-    // Check if the response actually contains audio data
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('audio/')) {
-      console.error('ElevenLabs API did not return audio content. Content-Type:', contentType);
-      return null;
-    }
-    
-    // Get the audio blob from the response
-    const audioBlob = await response.blob();
-    
-    // Verify that we actually got a valid audio blob
-    if (audioBlob.size === 0) {
-      console.error('ElevenLabs API returned an empty audio blob');
-      return null;
-    }
-    
-    console.log(`Received audio blob: ${audioBlob.size} bytes, type: ${audioBlob.type}`);
-    
-    // Create an object URL for the blob
-    const audioUrl = URL.createObjectURL(audioBlob);
-    audioCache[cacheKey] = audioUrl;
-    console.log('Created object URL for audio:', audioUrl);
-    
-    // Verify the audio can be played
-    if (typeof window !== 'undefined') {
-      try {
-        // Create a test audio element to ensure the audio plays
-        const testAudio = new Audio();
-        
-        // Use a Promise to properly handle audio loading
-        const audioTestPromise = new Promise<void>((resolve, reject) => {
-          // Set up event handlers with proper error handling
-          testAudio.addEventListener('loadedmetadata', () => {
-            console.log('Audio metadata loaded, duration:', testAudio.duration, 'seconds');
-          });
-          
-          testAudio.addEventListener('canplay', () => {
-            console.log('Audio can start playing');
-            resolve(); // Audio is ready
-          });
-          
-          testAudio.addEventListener('error', () => {
-            const errorMessage = testAudio.error ? 
-              `Audio test error code: ${testAudio.error.code}` : 'unknown error';
-            console.warn(errorMessage); // Use warning instead of error
-            resolve(); // Resolve anyway to not block the process
-          });
-          
-          // Set a timeout in case the events don't fire
-          setTimeout(() => {
-            console.log('Audio test timeout reached');
-            resolve(); // Resolve anyway to not block the process
-          }, 1000);
-        });
-        
-        // Load the audio
-        testAudio.src = audioUrl;
-        testAudio.preload = 'auto';
-        testAudio.load();
-        
-        // Wait for the audio test to complete (with a timeout)
-        const timeoutPromise = new Promise<void>(resolve => {
-          setTimeout(() => {
-            console.log('Global audio test timeout reached');
-            resolve();
-          }, 2000);
-        });
-        
-        // Wait for either the audio test or the timeout
-        await Promise.race([audioTestPromise, timeoutPromise]);
-        
-        console.log('Audio test completed');
-      } catch (testError) {
-        console.warn('Error in audio test setup:', testError);
-        // Continue anyway - the error might be due to the test, not the audio itself
+      // Get the audio blob from the response
+      const audioBlob = await response.blob();
+      
+      // Verify that we actually got a valid audio blob
+      if (audioBlob.size === 0) {
+        console.error('Received empty audio blob from ElevenLabs');
+        return null;
       }
+      
+      // Create an object URL for the blob
+      const audioUrl = URL.createObjectURL(audioBlob);
+      console.log(`Created audio URL for word: ${normalizedText}`);
+      
+      return audioUrl;
+    } catch (error) {
+      console.error('Error calling ElevenLabs API:', error);
+      return null;
     }
-    
-    return audioUrl;
-  } catch (error) {
-    console.error('Error converting text to speech:', error);
-    return null;
   }
+  
+  return null;
 };
 
-/**
- * Clear the audio cache
- */
-export const clearAudioCache = () => {
-  Object.keys(audioCache).forEach(key => {
-    // Revoke object URLs to prevent memory leaks
-    URL.revokeObjectURL(audioCache[key]);
-    delete audioCache[key];
-  });
-};
+

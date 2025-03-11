@@ -58,8 +58,6 @@ export default function Home() {
           </GameProvider>
         </div>
       </div>
-
-      <Footer />
     </div>
   );
 }

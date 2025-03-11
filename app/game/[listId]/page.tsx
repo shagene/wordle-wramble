@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { use } from 'react';
 import { Heading } from "../../components/heading";
 import { WordleGame } from "../../ui";
 import { Button } from "../../components/button";
@@ -11,14 +12,15 @@ import { GameProgress } from '../components/GameProgress';
 import { GameProvider, useGameContext } from '../context/GameContext';
 
 type GamePageProps = {
-  params: {
+  params: Promise<{
     listId: string;
-  };
+  }>;
 };
 
 function GamePageContent({ params }: GamePageProps) {
   const router = useRouter();
-  const { listId } = params;
+  // Unwrap params using React.use() as required by Next.js
+  const { listId } = use(params);
   const { setWordList, wordList } = useGameContext();
   const [loading, setLoading] = useState(true);
 
