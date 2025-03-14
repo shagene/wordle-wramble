@@ -32,8 +32,8 @@ const renderStars = (count: number): React.ReactNode => {
   const bronzeStar = "✨";
   
   if (count === 3) return <span className="text-2xl">{goldStar}{goldStar}{goldStar}</span>;
-  if (count === 2) return <span className="text-2xl">{goldStar}{goldStar}</span>;
-  if (count === 1) return <span className="text-2xl">{goldStar}</span>;
+  if (count === 2) return <span className="text-2xl">{silverStar}{silverStar}</span>;
+  if (count === 1) return <span className="text-2xl">{bronzeStar}</span>;
   return <span className="text-gray-400">No stars yet</span>;
 };
 
