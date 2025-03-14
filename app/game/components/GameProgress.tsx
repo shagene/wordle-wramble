@@ -10,7 +10,7 @@ type GameProgressProps = {
 
 export function GameProgress({ wordList }: GameProgressProps) {
   const { currentWordIndex } = useGameContext();
-  const [progress, setProgress] = useState<{[word: string]: WordProgress}>({});
+  const [, setProgress] = useState<{[word: string]: WordProgress}>({});
   
   useEffect(() => {
     // Load progress from localStorage

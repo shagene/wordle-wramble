@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { Header, Footer, NavButton, WordleGame } from "./ui";
+import { Header, NavButton, WordleGame } from "./ui";
 import { GameProvider } from "./game/context/GameContext";
 
 export default function Home() {
