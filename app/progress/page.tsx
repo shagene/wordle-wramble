@@ -19,7 +19,7 @@ export default function ProgressPage() {
       </Heading>
       
       <p className="text-xl text-center max-w-2xl mb-8 font-[family-name:var(--font-bubblegum-sans)]">
-        Here you can see how well you're doing with your spelling words!
+        Here you can see how well you&apos;re doing with your spelling words!
       </p>
       
       <ProgressDataLoader>
@@ -54,7 +54,7 @@ export default function ProgressPage() {
               <div className="w-full max-w-2xl">
                 {wordLists.length === 0 ? (
                   <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-                    <p className="text-lg mb-6">You don't have any Wordles yet!</p>
+                    <p className="text-lg mb-6">You don&apos;t have any Wordles yet!</p>
                     <Link href="/wordlist/create">
                       <Button color="green" className="text-white">
                         Create Your First Wordle
