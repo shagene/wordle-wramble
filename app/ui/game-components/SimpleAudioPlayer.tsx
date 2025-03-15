@@ -10,7 +10,7 @@ interface SimpleAudioPlayerProps {
 
 export function SimpleAudioPlayer({ onApiKeySet }: SimpleAudioPlayerProps) {
   const {
-    apiKey,
+    
     setApiKey,
     voices,
     selectedVoiceId,

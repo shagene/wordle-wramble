@@ -10,7 +10,6 @@ import { Voice } from './types';
  */
 export function useAudioService() {
   const {
-    apiKey,
     setApiKey,
     voices,
     selectedVoiceId,
