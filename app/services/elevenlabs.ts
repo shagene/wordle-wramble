@@ -108,7 +108,13 @@ export const fetchVoices = async (): Promise<Voice[]> => {
     
     if (data.voices && Array.isArray(data.voices)) {
       // Update available voices with fetched data
-      const fetchedVoices = data.voices.map((voice: any) => ({
+      interface ElevenLabsVoice {
+        voice_id: string;
+        name: string;
+        preview_url?: string;
+      }
+      
+      const fetchedVoices = data.voices.map((voice: ElevenLabsVoice) => ({
         voice_id: voice.voice_id,
         name: voice.name,
         preview_url: voice.preview_url
@@ -127,7 +133,7 @@ export const fetchVoices = async (): Promise<Voice[]> => {
         if (typeof window !== 'undefined') {
           try {
             localStorage.setItem('elevenLabsSelectedVoice', selectedVoiceId);
-          } catch (e) {
+          } catch {
             console.error('Error saving voice ID to localStorage');
           }
         }
@@ -135,7 +141,7 @@ export const fetchVoices = async (): Promise<Voice[]> => {
     }
 
     return availableVoices;
-  } catch (error) {
+  } catch {
     return availableVoices; // Return default voices on error
   }
 };

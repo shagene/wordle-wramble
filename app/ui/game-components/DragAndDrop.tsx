@@ -25,14 +25,11 @@ export function DragAndDrop({
   onComplete,
   onSlotClick
 }: DragAndDropProps) {
-  const [draggedLetter, setDraggedLetter] = useState<{ letter: string; index: number } | null>(null);
-
   // Handle dragging a letter
   const handleDragStart = (e: React.DragEvent, letter: string, index: number): void => {
     e.dataTransfer.setData('letter', letter);
     e.dataTransfer.setData('index', index.toString());
     e.dataTransfer.setData('sourceType', placedIndices.includes(index) ? 'slot' : 'source');
-    setDraggedLetter({ letter, index });
   };
   
   // Handle dropping a letter into a slot
@@ -82,7 +79,6 @@ export function DragAndDrop({
     }
     
     onArrangementChange(newArrangement, newPlacedIndices);
-    setDraggedLetter(null);
     
     // Check if the word is complete
     const isComplete = newArrangement.every(letter => letter !== '');
