@@ -292,7 +292,7 @@ export function useAudioService() {
   }, [selectedVoiceId]);
 
   // Play word pronunciation - simplified to always use browser speech synthesis
-  const playWordAudio = useCallback(async (word: string, _onShowApiKeyModal: () => void) => {
+  const playWordAudio = useCallback(async (word: string) => {
     console.log('Playing audio for word:', word);
     
     // Always use browser speech synthesis for reliability

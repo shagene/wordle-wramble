@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { LetterTile } from '../index';
 import type { LetterStatus } from '.';
 
