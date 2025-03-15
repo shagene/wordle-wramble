@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Voice } from '../../services/elevenlabs';
 
 interface VoiceSelectorProps {
@@ -40,8 +40,8 @@ export function VoiceSelector({
     }
   }, [voices, selectedVoiceId, selectedVoice, onVoiceSelect]);
   
-  // Handle refreshing the voices list
-  const handleRefresh = async () => {
+  // Handle refreshing the voices list - wrapped in useCallback to prevent recreation on every render
+  const handleRefresh = useCallback(async () => {
     if (!isApiKeySet()) {
       console.warn('VoiceSelector - Cannot refresh voices: API key not set');
       return;
@@ -64,7 +64,7 @@ export function VoiceSelector({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isApiKeySet, onRefreshVoices, selectedVoiceId, onVoiceSelect]);
   
   // Refresh voices when component mounts if API key is set
   useEffect(() => {

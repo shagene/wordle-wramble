@@ -134,7 +134,7 @@ export function useAudioService() {
         // We don't remove the element, just pause it
       }
     };
-  }, []);
+  }, [selectedVoiceId]);
 
   // Use browser speech synthesis as a fallback
   const playFallbackAudio = useCallback((word: string) => {

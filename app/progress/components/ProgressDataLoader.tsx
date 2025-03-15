@@ -190,7 +190,7 @@ export function ProgressDataLoader({ children }: ProgressDataLoaderProps) {
     };
     
     loadData();
-  }, []);
+  }, [achievements]);
 
   return (
     <>

@@ -54,7 +54,7 @@ function GamePageContent({ params }: GamePageProps) {
     };
     
     loadWordList();
-  }, [listId, router]);
+  }, [listId, router, setWordList]);
 
   // Handle completing a word
   const handleCompleteWord = (word: string, attempts: number) => {
