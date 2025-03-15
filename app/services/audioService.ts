@@ -16,6 +16,64 @@ export interface Voice {
 }
 
 /**
+ * Browser TTS fallback function
+ * This is a regular function, not a hook, so it can be called anywhere
+ */
+function browserTTS(text: string) {
+  if (!('speechSynthesis' in window)) {
+    console.warn('Browser speech synthesis not supported');
+    return;
+  }
+  
+  // Cancel any ongoing speech first
+  window.speechSynthesis.cancel();
+
+  try {
+    // Create a new utterance
+    const utterance = new SpeechSynthesisUtterance(text.toUpperCase());
+    
+    // Configure for better pronunciation
+    utterance.rate = 0.8;  // Slightly slower
+    utterance.pitch = 1.0; // Normal pitch
+    utterance.volume = 1.0; // Full volume
+    
+    // Set language to English
+    utterance.lang = 'en-US';
+    
+    // Try to find a good voice
+    const voices = window.speechSynthesis.getVoices();
+    if (voices && voices.length > 0) {
+      // Prefer a female English voice
+      const englishVoice = voices.find(voice => 
+        voice.lang.includes('en-') && voice.name.includes('Female'));
+      
+      if (englishVoice) {
+        utterance.voice = englishVoice;
+      }
+    }
+    
+    // Speak the text
+    window.speechSynthesis.speak(utterance);
+    
+    // Chrome workaround for background tabs
+    if (navigator.userAgent.includes('Chrome')) {
+      const resumeInfinity = () => {
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
+      };
+      
+      const intervalId = setInterval(resumeInfinity, 250);
+      
+      utterance.onend = () => {
+        clearInterval(intervalId);
+      };
+    }
+  } catch (error) {
+    console.error('Browser TTS error:', error);
+  }
+}
+
+/**
  * Simple audio service for text-to-speech using ElevenLabs API
  */
 export function useAudioService() {
@@ -88,7 +146,12 @@ export function useAudioService() {
       const data = await response.json();
       
       if (data.voices && Array.isArray(data.voices)) {
-        const fetchedVoices = data.voices.map((voice: any) => ({
+        interface ElevenLabsVoice {
+          voice_id: string;
+          name: string;
+        }
+        
+        const fetchedVoices = data.voices.map((voice: ElevenLabsVoice) => ({
           voice_id: voice.voice_id,
           name: voice.name
         }));
@@ -139,7 +202,7 @@ export function useAudioService() {
   const playAudio = useCallback(async (text: string) => {
     if (!apiKey) {
       console.warn('Cannot play audio: API key not set');
-      useBrowserTTS(text);
+      browserTTS(text);
       return;
     }
 
@@ -158,7 +221,7 @@ export function useAudioService() {
     try {
       // For very short words (2 chars or less), use browser TTS
       if (text.length <= 2) {
-        useBrowserTTS(text);
+        browserTTS(text);
         setIsLoading(false);
         return cleanup;
       }
@@ -208,7 +271,7 @@ export function useAudioService() {
       audio.onerror = (error) => {
         console.error('Audio playback error:', error);
         URL.revokeObjectURL(audioUrl);
-        useBrowserTTS(text); // Fallback
+        browserTTS(text); // Fallback
       };
       
       audio.onended = () => {
@@ -221,7 +284,7 @@ export function useAudioService() {
       const signal = controller.signal;
       
       // Setup a promise that resolves when playback is complete or aborted
-      const playbackPromise = new Promise((resolve, reject) => {
+      const playbackPromise = new Promise((resolve) => {
         audio.onended = () => {
           if (isMounted) {
             console.log('Audio playback complete');
@@ -254,7 +317,7 @@ export function useAudioService() {
       if (isMounted) {
         console.error('Error playing audio:', error);
         // Fall back to browser TTS
-        useBrowserTTS(text);
+        browserTTS(text);
       }
     } finally {
       if (isMounted) {
@@ -265,37 +328,6 @@ export function useAudioService() {
     // Return cleanup function
     return cleanup;
   }, [apiKey, selectedVoiceId]);
-
-  // Browser TTS fallback
-  const useBrowserTTS = useCallback((text: string) => {
-    if (!('speechSynthesis' in window)) {
-      console.warn('Browser speech synthesis not supported');
-      return;
-    }
-    
-    // Cancel any ongoing speech first
-    window.speechSynthesis.cancel();
-
-    try {
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel();
-      
-      // Create utterance
-      const utterance = new SpeechSynthesisUtterance(text.toUpperCase());
-      
-      // Set properties
-      utterance.rate = 0.8;
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
-      utterance.lang = 'en-US';
-      
-      // Speak
-      window.speechSynthesis.speak(utterance);
-      
-    } catch (error) {
-      console.error('Browser TTS error:', error);
-    }
-  }, []);
 
   return {
     apiKey,
