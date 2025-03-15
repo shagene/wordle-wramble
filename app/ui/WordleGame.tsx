@@ -1,11 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useGameContext } from '../game/context/GameContext';
-import { LetterTile, HintButton } from '.';
-import { useRouter } from 'next/navigation';
+import { HintButton } from '.';
 import type { ReactElement } from 'react';
-import { Button } from '../components/button';
 
 // Import our refactored components
 import {
@@ -27,7 +25,6 @@ export function WordleGame({
   isDemo = false,
   onComplete
 }: WordleGameProps): ReactElement {
-  const router = useRouter();
   const { currentWordIndex, setCurrentWordIndex } = useGameContext();
   
   // Game state
@@ -35,7 +32,6 @@ export function WordleGame({
   const [scrambledLetters, setScrambledLetters] = useState<string[]>([]);
   const [userArrangement, setUserArrangement] = useState<string[]>([]);
   const [placedIndices, setPlacedIndices] = useState<number[]>([]);
-  const [isCorrect, setIsCorrect] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [letterStatuses, setLetterStatuses] = useState<LetterStatus[]>([]);
@@ -54,6 +50,34 @@ export function WordleGame({
     refreshVoices
   } = useAudioService();
   
+  const MAX_ATTEMPTS = 3;
+  
+  // Store audio cleanup functions
+  const [audioCleanup, setAudioCleanup] = useState<(() => void) | undefined>();
+  
+  // Initialize the game with a scrambled word
+  useEffect(() => {
+    if (currentWord) {
+      const scrambled = scrambleWord(currentWord);
+      setScrambledLetters(scrambled);
+      setUserArrangement(Array(scrambled.length).fill(''));
+      setPlacedIndices([]);
+      setShowSuccess(false);
+      setAttempts(0);
+      setLetterStatuses(Array(currentWord.length).fill('empty'));
+    }
+  }, [currentWord]);
+  
+  // Cleanup audio when component unmounts or when currentWord changes
+  useEffect(() => {
+    return () => {
+      // Call the cleanup function if it exists
+      if (audioCleanup) {
+        audioCleanup();
+      }
+    };
+  }, [audioCleanup]);
+  
   // Return early if no words are available
   if (!words.length) {
     return (
@@ -64,22 +88,6 @@ export function WordleGame({
       </div>
     );
   }
-
-  const MAX_ATTEMPTS = 3;
-  
-  // Initialize the game with a scrambled word
-  useEffect(() => {
-    if (currentWord) {
-      const scrambled = scrambleWord(currentWord);
-      setScrambledLetters(scrambled);
-      setUserArrangement(Array(scrambled.length).fill(''));
-      setPlacedIndices([]);
-      setIsCorrect(false);
-      setShowSuccess(false);
-      setAttempts(0);
-      setLetterStatuses(Array(currentWord.length).fill('empty'));
-    }
-  }, [currentWord]);
   
   // Display attempts counter with max attempts
   const renderAttemptsCounter = () => {
@@ -89,19 +97,6 @@ export function WordleGame({
       </div>
     );
   };
-  
-  // Store audio cleanup functions
-  const [audioCleanup, setAudioCleanup] = useState<(() => void) | undefined>();
-
-  // Cleanup audio when component unmounts or when currentWord changes
-  useEffect(() => {
-    return () => {
-      // Call the cleanup function if it exists
-      if (audioCleanup) {
-        audioCleanup();
-      }
-    };
-  }, [audioCleanup]);
 
   // Show hint and play audio
   const showHint = async (): Promise<void> => {
@@ -157,7 +152,6 @@ export function WordleGame({
   // Handle word completion
   const handleWordComplete = (isCorrect: boolean) => {
     if (isCorrect) {
-      setIsCorrect(true);
       setShowSuccess(true);
       
       // Cleanup previous audio if exists
@@ -278,7 +272,6 @@ export function WordleGame({
     setScrambledLetters(scrambleWord(words[0]));
     setUserArrangement(Array(words[0].length).fill(''));
     setPlacedIndices([]);
-    setIsCorrect(false);
     setShowSuccess(false);
     setAttempts(0);
     setLetterStatuses(Array(words[0].length).fill('empty'));

@@ -7,7 +7,6 @@ interface CustomAudioElement extends HTMLAudioElement {
   setupErrorListener?: () => void;
 }
 import { 
-  textToSpeech, 
   isApiKeySet, 
   setElevenLabsApiKey,
   getAvailableVoices,
@@ -64,7 +63,7 @@ export function useAudioService() {
       // This prevents errors on initial load
       const setupErrorListener = () => {
         // Only add the error listener once we actually try to play something
-        audioRef.current?.addEventListener('error', (event) => {
+        audioRef.current?.addEventListener('error', () => {
           // Only log errors if we actually have a source set
           if (audioRef.current?.src && audioRef.current.src !== '') {
             const errorMessage = audioRef.current?.error 
@@ -293,7 +292,7 @@ export function useAudioService() {
   }, [selectedVoiceId]);
 
   // Play word pronunciation - simplified to always use browser speech synthesis
-  const playWordAudio = useCallback(async (word: string, onShowApiKeyModal: () => void) => {
+  const playWordAudio = useCallback(async (word: string, _onShowApiKeyModal: () => void) => {
     console.log('Playing audio for word:', word);
     
     // Always use browser speech synthesis for reliability
