@@ -149,12 +149,10 @@ function GamePageContent({ params }: GamePageProps) {
   );
 }
 
-export function GamePage({ params }: GamePageProps) {
+export default function Page({ params }: GamePageProps) {
   return (
     <GameProvider>
       <GamePageContent params={params} />
     </GameProvider>
   );
 }
-
-export default GamePage;

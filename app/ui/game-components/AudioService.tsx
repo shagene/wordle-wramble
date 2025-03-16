@@ -31,7 +31,7 @@ export function useAudioService() {
     
     // Check if selected voice exists in available voices
     const voiceExists = voices.some(voice => voice.voice_id === selectedVoiceId);
-    if (!voiceExists && voices.length > 0) {
+    if (!voiceExists && voices.length > 0 && selectedVoiceId !== '') {
       console.log(`Selected voice ID ${selectedVoiceId} not found in available voices, resetting to default`);
       // Use the first available voice as fallback
       const defaultVoice = voices[0].voice_id;
@@ -110,7 +110,7 @@ export function useAudioService() {
           
           // Verify if the current selectedVoiceId is valid
           const currentVoiceIsValid = availableVoices.some(voice => voice.voice_id === selectedVoiceId);
-          if (!currentVoiceIsValid && availableVoices.length > 0) {
+          if (!currentVoiceIsValid && availableVoices.length > 0 && selectedVoiceId !== '') {
             // If not valid, select the first available voice
             const defaultVoice = availableVoices[0].voice_id;
             console.log(`AudioService - Current voice ID ${selectedVoiceId} is invalid, setting to ${defaultVoice}`);

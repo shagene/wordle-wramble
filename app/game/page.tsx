@@ -83,12 +83,10 @@ function GamePageContent() {
   );
 }
 
-export function GamePage() {
+export default function Page() {
   return (
     <GameProvider>
       <GamePageContent />
     </GameProvider>
   );
 }
-
-export default GamePage;

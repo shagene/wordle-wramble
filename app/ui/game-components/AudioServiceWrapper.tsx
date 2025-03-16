@@ -22,15 +22,15 @@ export function useAudioService() {
   // Wrapper for the old playWordAudio function
   const playWordAudio = useCallback((word: string, onShowApiKeyModal?: () => void) => {
     // Store the cleanup function returned by playAudio
-    const cleanup = playAudio(word);
+    const cleanupFn = playAudio(word);
     
     // If we don't have an API key and the callback is provided, show the modal
     if (!hasApiKey && onShowApiKeyModal) {
       setTimeout(() => onShowApiKeyModal(), 500);
     }
     
-    // Return the cleanup function so it can be used in useEffect cleanup if needed
-    return cleanup;
+    // Return a wrapped cleanup function that handles errors gracefully
+    return Promise.resolve(cleanupFn);
   }, [playAudio, hasApiKey]);
 
   // Wrapper for the old isApiKeySet function

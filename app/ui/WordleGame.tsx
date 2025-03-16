@@ -76,7 +76,7 @@ export function WordleGame({
         audioCleanup();
       }
     };
-  }, [audioCleanup]);
+  }, [audioCleanup, currentWord]);
   
   // Return early if no words are available
   if (!words.length) {
@@ -115,6 +115,8 @@ export function WordleGame({
       const cleanupPromise = playWordAudio(currentWord, () => setShowApiKeyModal(true));
       cleanupPromise.then(cleanup => {
         if (cleanup) setAudioCleanup(cleanup);
+      }).catch(error => {
+        console.log('Error setting up audio cleanup:', error);
       });
     }
   };
@@ -163,6 +165,8 @@ export function WordleGame({
       const cleanupPromise = playWordAudio(currentWord, () => setShowApiKeyModal(true));
       cleanupPromise.then(cleanup => {
         if (cleanup) setAudioCleanup(cleanup);
+      }).catch(error => {
+        console.log('Error setting up audio cleanup:', error);
       });
       
       // Add current word result to our results array

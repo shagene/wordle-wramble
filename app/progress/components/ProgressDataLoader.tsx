@@ -158,28 +158,28 @@ export function ProgressDataLoader({ children }: ProgressDataLoaderProps) {
             perfectWords: perfectWords
           });
           
-          // Update achievements based on stats
-          const updatedAchievements = achievements.map(achievement => {
-            let unlocked = false;
-            let progress = 0;
-            
-            // Check thresholds for different achievement types
-            if (achievement.id === 'perfect_speller') {
-              unlocked = perfectWords >= achievement.threshold;
-              progress = perfectWords;
-            } else if (achievement.id === 'wordle_wizard') {
-              unlocked = completed >= achievement.threshold;
-              progress = completed;
-            } else {
-              // Star-based achievements
-              unlocked = stars >= achievement.threshold;
-              progress = stars;
-            }
-            
-            return { ...achievement, unlocked, progress };
-          });
-          
-          setAchievements(updatedAchievements);
+          // Update achievements based on stats using the function form of setState
+          setAchievements(prevAchievements => 
+            prevAchievements.map(achievement => {
+              let unlocked = false;
+              let progress = 0;
+              
+              // Check thresholds for different achievement types
+              if (achievement.id === 'perfect_speller') {
+                unlocked = perfectWords >= achievement.threshold;
+                progress = perfectWords;
+              } else if (achievement.id === 'wordle_wizard') {
+                unlocked = completed >= achievement.threshold;
+                progress = completed;
+              } else {
+                // Star-based achievements
+                unlocked = stars >= achievement.threshold;
+                progress = stars;
+              }
+              
+              return { ...achievement, unlocked, progress };
+            })
+          );
         }
         
         setLoading(false);
@@ -190,7 +190,7 @@ export function ProgressDataLoader({ children }: ProgressDataLoaderProps) {
     };
     
     loadData();
-  }, [achievements]);
+  }, []); // Empty dependency array is fine now
 
   return (
     <>

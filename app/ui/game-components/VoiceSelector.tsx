@@ -32,7 +32,7 @@ export function VoiceSelector({
     console.log('VoiceSelector - Found selected voice:', selectedVoice);
     
     // Auto-select a valid voice if the current selection is invalid
-    if (voices.length > 0 && !selectedVoice) {
+    if (voices.length > 0 && !selectedVoice && selectedVoiceId !== '') {
       console.log('VoiceSelector - Selected voice not found in available voices, selecting default');
       const defaultVoice = voices[0].voice_id;
       console.log(`VoiceSelector - Auto-selecting first available voice: ${defaultVoice}`);
@@ -72,7 +72,7 @@ export function VoiceSelector({
       if (voices.length === 0) {
         console.log('VoiceSelector - No voices available, refreshing...');
         handleRefresh();
-      } else if (!selectedVoice) {
+      } else if (!selectedVoice && selectedVoiceId !== '') {
         // If we have voices but selected voice is invalid
         console.log(`VoiceSelector - Selected voice ID ${selectedVoiceId} not found in available voices`);
         console.log('VoiceSelector - Available voices:', voices.map(v => `${v.name} (${v.voice_id})`));
