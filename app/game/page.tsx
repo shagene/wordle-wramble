@@ -1,13 +1,49 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from "../components/button";
 import Link from 'next/link';
 import { WordList } from './types';
 import { GameHeader } from './components/GameHeader';
 import { WordListGrid } from './components/WordListGrid';
 import { GameProvider } from './context/GameContext';
+
+// Component to handle the temp ID parameter
+function TempListHandler() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tempId = searchParams.get('temp');
+  
+  // Check for temporary word list from shared link
+  useEffect(() => {
+    if (tempId) {
+      try {
+        // Try to load the temporary word list from session storage
+        const tempListJson = sessionStorage.getItem('tempWordList');
+        
+        if (tempListJson) {
+          const tempList = JSON.parse(tempListJson);
+          
+          // Validate that it's the correct temp list
+          if (tempList.id === tempId) {
+            // Navigate to the game with this list
+            router.push(`/game/${tempList.id}`);
+            return;
+          }
+        }
+        
+        // If we couldn't find the temp list in session storage,
+        // redirect to the share page to handle the shared list properly
+        router.push('/');
+      } catch (error) {
+        console.error('Error loading temporary word list:', error);
+      }
+    }
+  }, [tempId, router]);
+  
+  return null;
+}
 
 function GamePageContent() {
   const router = useRouter();
@@ -58,6 +94,11 @@ function GamePageContent() {
         backText="Back to Home"
         showNewWordleButton={true}
       />
+      
+      {/* Wrap the component that uses useSearchParams in Suspense */}
+      <Suspense fallback={null}>
+        <TempListHandler />
+      </Suspense>
       
       {loading ? (
         <div className="text-center py-8">
