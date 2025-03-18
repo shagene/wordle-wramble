@@ -7,6 +7,9 @@ interface LetterTileProps {
   onDragStart?: (e: React.DragEvent) => void;
   onDragOver?: (e: React.DragEvent) => void;
   onDrop?: (e: React.DragEvent) => void;
+  onTouchStart?: (e: React.TouchEvent) => void;
+  onTouchMove?: (e: React.TouchEvent) => void;
+  onTouchEnd?: (e: React.TouchEvent) => void;
   draggable?: boolean;
   isSlot?: boolean;
 }
@@ -22,6 +25,9 @@ const LetterTile = ({
   onDragStart,
   onDragOver,
   onDrop,
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd,
   draggable = false,
   isSlot = false,
 }: LetterTileProps) => {
@@ -72,6 +78,9 @@ const LetterTile = ({
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDrop={onDrop}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
       draggable={draggable}
     >
       {letter}

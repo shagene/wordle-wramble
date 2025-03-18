@@ -2,6 +2,7 @@
 
 import { LetterTile } from '../index';
 import type { LetterStatus } from '.';
+import { useState } from 'react';
 
 interface DragAndDropProps {
   currentWord: string;
@@ -24,6 +25,11 @@ export function DragAndDrop({
   onComplete,
   onSlotClick
 }: DragAndDropProps) {
+  // State for touch interactions
+  const [activeLetter, setActiveLetter] = useState<{ letter: string; index: number; sourceType: string } | null>(null);
+  const [touchStartX, setTouchStartX] = useState(0);
+  const [touchStartY, setTouchStartY] = useState(0);
+
   // Handle dragging a letter
   const handleDragStart = (e: React.DragEvent, letter: string, index: number): void => {
     e.dataTransfer.setData('letter', letter);
@@ -38,6 +44,49 @@ export function DragAndDrop({
     const sourceIndex = parseInt(e.dataTransfer.getData('index'));
     const sourceType = e.dataTransfer.getData('sourceType');
     
+    handleLetterPlacement(letter, sourceIndex, sourceType, slotIndex);
+  };
+
+  // Handle touch start
+  const handleTouchStart = (e: React.TouchEvent, letter: string, index: number): void => {
+    e.preventDefault();
+    setActiveLetter({
+      letter,
+      index,
+      sourceType: placedIndices.includes(index) ? 'slot' : 'source'
+    });
+    setTouchStartX(e.touches[0].clientX);
+    setTouchStartY(e.touches[0].clientY);
+  };
+
+  // Handle touch move
+  const handleTouchMove = (e: React.TouchEvent): void => {
+    if (!activeLetter) return;
+    e.preventDefault();
+  };
+
+  // Handle touch end
+  const handleTouchEnd = (e: React.TouchEvent, slotIndex: number): void => {
+    if (!activeLetter) return;
+    e.preventDefault();
+    
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    
+    // Calculate the distance moved
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+    
+    // If the touch moved significantly, consider it a drag
+    if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
+      handleLetterPlacement(activeLetter.letter, activeLetter.index, activeLetter.sourceType, slotIndex);
+    }
+    
+    setActiveLetter(null);
+  };
+
+  // Common function to handle letter placement
+  const handleLetterPlacement = (letter: string, sourceIndex: number, sourceType: string, slotIndex: number): void => {
     const newArrangement = [...userArrangement];
     const newPlacedIndices = [...placedIndices];
     
@@ -107,6 +156,9 @@ export function DragAndDrop({
             onClick={() => onSlotClick(index)}
             draggable={!!userArrangement[index]}
             isSlot
+            onTouchStart={(e) => handleTouchStart(e, userArrangement[index] || '', index)}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={(e) => handleTouchEnd(e, index)}
           />
         ))}
       </div>
@@ -120,6 +172,9 @@ export function DragAndDrop({
             status="empty"
             draggable={!placedIndices.includes(index)}
             onDragStart={(e) => handleDragStart(e, letter, index)}
+            onTouchStart={(e) => handleTouchStart(e, letter, index)}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={(e) => handleTouchEnd(e, index)}
           />
         ))}
       </div>
