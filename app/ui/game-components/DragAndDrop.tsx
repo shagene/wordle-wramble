@@ -12,7 +12,6 @@ interface DragAndDropProps {
   letterStatuses: LetterStatus[];
   onArrangementChange: (newArrangement: string[], newPlacedIndices: number[]) => void;
   onComplete: (isCorrect: boolean) => void;
-  onSlotClick: (slotIndex: number) => void;
 }
 
 export function DragAndDrop({
@@ -23,7 +22,6 @@ export function DragAndDrop({
   letterStatuses,
   onArrangementChange,
   onComplete,
-  onSlotClick
 }: DragAndDropProps) {
   // State for touch interactions
   const [selectedLetter, setSelectedLetter] = useState<{ letter: string; index: number; sourceType: string } | null>(null);

@@ -121,30 +121,6 @@ export function WordleGame({
     }
   };
   
-  // Handle slot click
-  const handleSlotClick = (slotIndex: number): void => {
-    if (userArrangement[slotIndex]) {
-      // Find which original letter this was
-      const letterToReset = userArrangement[slotIndex];
-      const originalIndex = scrambledLetters.findIndex(
-        (letter: string, index: number) => letter === letterToReset && placedIndices.includes(index)
-      );
-      
-      // Remove from placed indices
-      setPlacedIndices(placedIndices.filter((index: number) => index !== originalIndex));
-      
-      // Clear the slot
-      const newArrangement = [...userArrangement];
-      newArrangement[slotIndex] = '';
-      setUserArrangement(newArrangement);
-      
-      // Reset the letter status
-      const newStatuses = [...letterStatuses];
-      newStatuses[slotIndex] = 'empty';
-      setLetterStatuses(newStatuses);
-    }
-  };
-  
   // Handle arrangement change from DragAndDrop component
   const handleArrangementChange = (newArrangement: string[], newPlacedIndices: number[]) => {
     setUserArrangement(newArrangement);
@@ -347,7 +323,6 @@ export function WordleGame({
             letterStatuses={letterStatuses}
             onArrangementChange={handleArrangementChange}
             onComplete={handleWordComplete}
-            onSlotClick={handleSlotClick}
           />
           
           {/* Success message */}
