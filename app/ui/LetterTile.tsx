@@ -12,6 +12,7 @@ interface LetterTileProps {
   onTouchEnd?: (e: React.TouchEvent) => void;
   draggable?: boolean;
   isSlot?: boolean;
+  isSelected?: boolean;
 }
 
 /**
@@ -30,9 +31,14 @@ const LetterTile = ({
   onTouchEnd,
   draggable = false,
   isSlot = false,
+  isSelected = false,
 }: LetterTileProps) => {
   // Determine the appropriate styling based on status
   const getStatusClasses = () => {
+    if (isSelected) {
+      return 'border-2 border-blue-500 bg-blue-100 dark:bg-blue-900 dark:border-blue-400 scale-110 shadow-lg';
+    }
+
     switch (status) {
       case 'empty':
         return isSlot 

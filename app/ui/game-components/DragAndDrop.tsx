@@ -26,9 +26,7 @@ export function DragAndDrop({
   onSlotClick
 }: DragAndDropProps) {
   // State for touch interactions
-  const [activeLetter, setActiveLetter] = useState<{ letter: string; index: number; sourceType: string } | null>(null);
-  const [touchStartX, setTouchStartX] = useState(0);
-  const [touchStartY, setTouchStartY] = useState(0);
+  const [selectedLetter, setSelectedLetter] = useState<{ letter: string; index: number; sourceType: string } | null>(null);
 
   // Handle dragging a letter
   const handleDragStart = (e: React.DragEvent, letter: string, index: number): void => {
@@ -47,42 +45,42 @@ export function DragAndDrop({
     handleLetterPlacement(letter, sourceIndex, sourceType, slotIndex);
   };
 
-  // Handle touch start
-  const handleTouchStart = (e: React.TouchEvent, letter: string, index: number): void => {
-    e.preventDefault();
-    setActiveLetter({
-      letter,
-      index,
-      sourceType: placedIndices.includes(index) ? 'slot' : 'source'
-    });
-    setTouchStartX(e.touches[0].clientX);
-    setTouchStartY(e.touches[0].clientY);
-  };
-
-  // Handle touch move
-  const handleTouchMove = (e: React.TouchEvent): void => {
-    if (!activeLetter) return;
-    e.preventDefault();
-  };
-
-  // Handle touch end
-  const handleTouchEnd = (e: React.TouchEvent, slotIndex: number): void => {
-    if (!activeLetter) return;
-    e.preventDefault();
+  // Handle touch/click on a letter
+  const handleLetterSelect = (letter: string, index: number, isFromSlot = false): void => {
+    // If clicking on an empty slot or empty space, do nothing
+    if (!letter) return;
     
-    const touchEndX = e.changedTouches[0].clientX;
-    const touchEndY = e.changedTouches[0].clientY;
-    
-    // Calculate the distance moved
-    const deltaX = touchEndX - touchStartX;
-    const deltaY = touchEndY - touchStartY;
-    
-    // If the touch moved significantly, consider it a drag
-    if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
-      handleLetterPlacement(activeLetter.letter, activeLetter.index, activeLetter.sourceType, slotIndex);
+    // If a letter is already selected and we click it again, deselect it
+    if (selectedLetter && selectedLetter.letter === letter && selectedLetter.index === index) {
+      setSelectedLetter(null);
+      return;
     }
     
-    setActiveLetter(null);
+    setSelectedLetter({
+      letter,
+      index,
+      sourceType: isFromSlot ? 'slot' : 'source'
+    });
+  };
+
+  // Handle touch/click on a slot
+  const handleSlotSelect = (slotIndex: number): void => {
+    const letterInSlot = userArrangement[slotIndex];
+    
+    // If there's a letter in this slot and no letter is selected, select this letter
+    if (letterInSlot && !selectedLetter) {
+      handleLetterSelect(letterInSlot, slotIndex, true);
+      return;
+    }
+    
+    // If no letter is selected and the slot is empty, do nothing
+    if (!selectedLetter) {
+      return;
+    }
+
+    // Place the selected letter in the slot
+    handleLetterPlacement(selectedLetter.letter, selectedLetter.index, selectedLetter.sourceType, slotIndex);
+    setSelectedLetter(null);
   };
 
   // Common function to handle letter placement
@@ -90,15 +88,20 @@ export function DragAndDrop({
     const newArrangement = [...userArrangement];
     const newPlacedIndices = [...placedIndices];
     
+    // If moving to the same slot, do nothing
+    if (sourceType === 'slot' && sourceIndex === slotIndex) {
+      return;
+    }
+    
     // If the target slot has a letter, handle the replacement
     if (userArrangement[slotIndex]) {
       const targetLetter = userArrangement[slotIndex];
       if (sourceType === 'slot') {
-        // Swap between slots
+        // Swap letters between slots
         newArrangement[sourceIndex] = targetLetter;
         newArrangement[slotIndex] = letter;
       } else {
-        // Move from source to occupied slot
+        // Moving from source to occupied slot
         // Find the original index of the letter being replaced
         const replacedLetterOriginalIndex = scrambledLetters.findIndex(
           (l, idx) => l === targetLetter && placedIndices.includes(idx)
@@ -117,11 +120,14 @@ export function DragAndDrop({
         newPlacedIndices.push(sourceIndex);
       }
     } else {
-      // Move to empty slot
-      newArrangement[slotIndex] = letter;
+      // Moving to an empty slot
       if (sourceType === 'slot') {
+        // Moving from slot to empty slot
         newArrangement[sourceIndex] = '';
+        newArrangement[slotIndex] = letter;
       } else {
+        // Moving from source to empty slot
+        newArrangement[slotIndex] = letter;
         newPlacedIndices.push(sourceIndex);
       }
     }
@@ -153,12 +159,10 @@ export function DragAndDrop({
             onDragStart={(e) => handleDragStart(e, userArrangement[index] || '', index)}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, index)}
-            onClick={() => onSlotClick(index)}
+            onClick={() => handleSlotSelect(index)}
             draggable={!!userArrangement[index]}
             isSlot
-            onTouchStart={(e) => handleTouchStart(e, userArrangement[index] || '', index)}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={(e) => handleTouchEnd(e, index)}
+            isSelected={selectedLetter?.sourceType === 'slot' && selectedLetter?.index === index}
           />
         ))}
       </div>
@@ -172,9 +176,8 @@ export function DragAndDrop({
             status="empty"
             draggable={!placedIndices.includes(index)}
             onDragStart={(e) => handleDragStart(e, letter, index)}
-            onTouchStart={(e) => handleTouchStart(e, letter, index)}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={(e) => handleTouchEnd(e, index)}
+            onClick={() => handleLetterSelect(letter, index)}
+            isSelected={selectedLetter?.sourceType === 'source' && selectedLetter?.index === index}
           />
         ))}
       </div>
