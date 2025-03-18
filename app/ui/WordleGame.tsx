@@ -175,8 +175,8 @@ export function WordleGame({
       
       // Save progress to localStorage
       if (!isDemo) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const listId = urlParams.get('list') || 'unknown';
+        const pathname = window.location.pathname;
+        const listId = pathname.split('/').pop() || 'unknown';
         saveProgress(listId, currentWord, attempts + 1, isDemo);
       }
       

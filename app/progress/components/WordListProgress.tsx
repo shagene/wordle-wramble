@@ -39,7 +39,7 @@ const renderStars = (count: number): React.ReactNode => {
 
 export function WordListProgress({ wordList, listProgress }: WordListProgressProps) {
   const completedWords = wordList.words.filter(word => 
-    listProgress[word] && listProgress[word].completed
+    listProgress[word]?.completed
   ).length;
   
   const totalWords = wordList.words.length;
@@ -51,7 +51,7 @@ export function WordListProgress({ wordList, listProgress }: WordListProgressPro
     <div className="mb-8 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-bold">{wordList.name}</h3>
-        <Link href={`/game?listId=${wordList.id}`}>
+        <Link href={`/game/${wordList.id}`}>
           <Button color="amber" className="text-sm py-1 px-3">
             Practice
           </Button>
@@ -74,9 +74,9 @@ export function WordListProgress({ wordList, listProgress }: WordListProgressPro
       <div className="space-y-3 mt-4">
         {wordList.words.map((word, index) => {
           const wordData = listProgress[word];
-          const completed = wordData && wordData.completed;
-          const attempts = wordData ? wordData.attempts : 0;
-          const stars = wordData ? (wordData.stars || getStarsForAttempts(attempts)) : 0;
+          const completed = wordData?.completed;
+          const attempts = wordData?.attempts || 0;
+          const stars = wordData?.stars || getStarsForAttempts(attempts);
           
           return (
             <div 
