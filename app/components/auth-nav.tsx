@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { Button } from './button';
-import { Text } from './text';
 
 export default function AuthNav() {
   const [user, setUser] = useState<User | null>(null);
