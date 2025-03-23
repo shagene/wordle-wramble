@@ -10,7 +10,9 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:e2e": "playwright test",
-    "test:a11y": "jest --testPathPattern=a11y"
+    "test:a11y": "jest --testPathPattern=a11y",
+    "check:types": "tsc --noEmit",
+    "check:all": "pnpm check:types && pnpm lint && pnpm build"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",

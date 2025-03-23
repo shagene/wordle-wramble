@@ -2,23 +2,64 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18.x or higher
+- pnpm (we use pnpm exclusively for this project)
+
+### Installation
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# Install dependencies
+pnpm install
+```
+
+### Development
+
+Run the development server:
+
+```bash
 pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Code Quality and Verification
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Before committing changes, run the verification script to ensure type safety and build integrity:
+
+```bash
+pnpm check:all
+```
+
+This will:
+1. Run TypeScript type checking
+2. Run ESLint 
+3. Perform a test build
+
+## Environment Variables
+
+Copy `.env.example` to `.env.local` and update with your credentials:
+
+```bash
+cp .env.example .env.local
+```
+
+Required environment variables:
+- Supabase configuration
+- ElevenLabs API key
+- Stripe credentials (for subscription features)
+
+## Project Structure
+
+This project follows a feature-based folder structure within the `app/` directory:
+- `app/auth` - Authentication related components and routes
+- `app/game` - Game functionality 
+- `app/wordlist` - Word list management
+- `app/components` - Shared UI components
+- `app/hooks` - Reusable React hooks
+- `app/lib` - Shared utilities and service clients
+- `app/services` - Business logic and API service layers
 
 ## Learn More
 
@@ -27,7 +68,9 @@ To learn more about Next.js, take a look at the following resources:
 - [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deployment
+
+The application is configured for deployment on Vercel. The main branch is automatically deployed to production.
 
 ## Deploy on Vercel
 
