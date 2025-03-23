@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
+import { Button } from './button';
+import { Text } from './text';
 
 export default function AuthNav() {
   const [user, setUser] = useState<User | null>(null);
@@ -37,38 +38,35 @@ export default function AuthNav() {
 
   return (
     <div className="bg-amber-600 text-white p-2 flex justify-between items-center">
-      <div className="font-bold">Wordle Wramble</div>
+      <div className="font-semibold text-white">Wordle Wramble</div>
       
       <div className="flex space-x-4 items-center">
         {loading ? (
-          <span className="text-sm">Loading...</span>
+          <div className="text-sm text-white">Loading...</div>
         ) : user ? (
           <>
-            <span className="text-sm hidden sm:inline">{user.email}</span>
-            <Link href="/auth/profile" className="text-sm hover:underline">
+            <div className="text-sm hidden sm:inline text-white">{user.email}</div>
+            <Button color="light" href="/auth/profile" className="text-sm">
               Profile
-            </Link>
-            <button 
+            </Button>
+            <Button 
+              color="white"
               onClick={async () => {
                 await supabase.auth.signOut();
                 window.location.href = '/';
               }}
-              className="text-sm px-2 py-1 bg-white text-amber-700 rounded hover:bg-amber-100"
             >
               Sign Out
-            </button>
+            </Button>
           </>
         ) : (
           <>
-            <Link href="/auth/login" className="text-sm hover:underline">
+            <Button outline href="/auth/login" className="text-white">
               Sign In
-            </Link>
-            <Link 
-              href="/auth/signup" 
-              className="text-sm px-2 py-1 bg-white text-amber-700 rounded hover:bg-amber-100"
-            >
+            </Button>
+            <Button color="white" href="/auth/signup">
               Sign Up
-            </Link>
+            </Button>
           </>
         )}
       </div>

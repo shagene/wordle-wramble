@@ -7,6 +7,9 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '../../lib/supabase';
+import { Button } from '../../components/button';
+import { Input, InputGroup } from '../../components/input';
+import { Text } from '../../components/text';
 
 // Define form schema
 const loginSchema = z.object({
@@ -108,9 +111,9 @@ function LoginPageContent() {
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-amber-600 mb-2">Wordle Wramble</h1>
           <h2 className="text-2xl font-semibold">Sign In</h2>
-          <p className="mt-2 text-gray-600">
+          <Text className="mt-2">
             Sign in to your account to track your progress and access premium features.
-          </p>
+          </Text>
         </div>
         
         {errorMessage && (
@@ -124,15 +127,16 @@ function LoginPageContent() {
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
               Email address
             </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-amber-500 focus:border-amber-500"
-              {...register('email')}
-            />
+            <InputGroup>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                {...register('email')}
+              />
+            </InputGroup>
             {errors.email && (
-              <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+              <Text className="mt-1 text-sm text-red-600">{errors.email.message}</Text>
             )}
           </div>
           
@@ -140,44 +144,46 @@ function LoginPageContent() {
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
               Password
             </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-amber-500 focus:border-amber-500"
-              {...register('password')}
-            />
+            <InputGroup>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                {...register('password')}
+              />
+            </InputGroup>
             {errors.password && (
-              <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+              <Text className="mt-1 text-sm text-red-600">{errors.password.message}</Text>
             )}
           </div>
           
           <div className="flex items-center justify-between">
             <div className="text-sm">
-              <Link href="/auth/reset-password" className="font-medium text-amber-600 hover:text-amber-500">
+              <Button plain href="/auth/reset-password">
                 Forgot your password?
-              </Link>
+              </Button>
             </div>
           </div>
           
           <div>
-            <button
+            <Button
               type="submit"
               disabled={isLoading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              color="amber"
+              className="w-full"
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
-            </button>
+            </Button>
           </div>
         </form>
         
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
+          <Text className="text-sm">
             Don&apos;t have an account?{' '}
-            <Link href="/auth/signup" className="font-medium text-amber-600 hover:text-amber-500">
+            <Button plain href="/auth/signup" className="font-medium">
               Sign up
-            </Link>
-          </p>
+            </Button>
+          </Text>
         </div>
       </div>
     </div>

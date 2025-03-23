@@ -6,6 +6,9 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '../../lib/supabase';
+import { Button } from '../../components/button';
+import { Input, InputGroup } from '../../components/input';
+import { Text } from '../../components/text';
 
 // Define form schema
 const signupSchema = z.object({
@@ -100,14 +103,12 @@ export default function SignUpPage() {
       <div className="flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-md text-center">
           <h2 className="text-2xl font-semibold mb-4">Check your email</h2>
-          <p className="mb-6">
+          <Text className="mb-6">
             We&apos;ve sent you a verification link. Please check your email and click the link to complete your registration.
-          </p>
-          <Link href="/auth/login">
-            <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500">
-              Back to Sign In
-            </button>
-          </Link>
+          </Text>
+          <Button href="/auth/login" color="amber">
+            Back to Sign In
+          </Button>
         </div>
       </div>
     );
@@ -119,9 +120,9 @@ export default function SignUpPage() {
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-amber-600 mb-2">Wordle Wramble</h1>
           <h2 className="text-2xl font-semibold">Create an Account</h2>
-          <p className="mt-2 text-gray-600">
+          <Text className="mt-2">
             Join Wordle Wramble to save your progress and access premium features.
-          </p>
+          </Text>
         </div>
         
         {errorMessage && (
@@ -135,15 +136,16 @@ export default function SignUpPage() {
             <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
               Full Name
             </label>
-            <input
-              id="fullName"
-              type="text"
-              autoComplete="name"
-              className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-amber-500 focus:border-amber-500"
-              {...register('fullName')}
-            />
+            <InputGroup>
+              <Input
+                id="fullName"
+                type="text"
+                autoComplete="name"
+                {...register('fullName')}
+              />
+            </InputGroup>
             {errors.fullName && (
-              <p className="mt-1 text-sm text-red-600">{errors.fullName.message}</p>
+              <Text className="mt-1 text-sm text-red-600">{errors.fullName.message}</Text>
             )}
           </div>
           
@@ -151,15 +153,16 @@ export default function SignUpPage() {
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
               Email address
             </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-amber-500 focus:border-amber-500"
-              {...register('email')}
-            />
+            <InputGroup>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                {...register('email')}
+              />
+            </InputGroup>
             {errors.email && (
-              <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+              <Text className="mt-1 text-sm text-red-600">{errors.email.message}</Text>
             )}
           </div>
           
@@ -167,15 +170,16 @@ export default function SignUpPage() {
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
               Password
             </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-amber-500 focus:border-amber-500"
-              {...register('password')}
-            />
+            <InputGroup>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="new-password"
+                {...register('password')}
+              />
+            </InputGroup>
             {errors.password && (
-              <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+              <Text className="mt-1 text-sm text-red-600">{errors.password.message}</Text>
             )}
           </div>
           
@@ -183,36 +187,38 @@ export default function SignUpPage() {
             <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
               Confirm Password
             </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              autoComplete="new-password"
-              className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-amber-500 focus:border-amber-500"
-              {...register('confirmPassword')}
-            />
+            <InputGroup>
+              <Input
+                id="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                {...register('confirmPassword')}
+              />
+            </InputGroup>
             {errors.confirmPassword && (
-              <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
+              <Text className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</Text>
             )}
           </div>
           
           <div>
-            <button
+            <Button
               type="submit"
               disabled={isLoading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              color="amber"
+              className="w-full"
             >
               {isLoading ? 'Creating account...' : 'Sign up'}
-            </button>
+            </Button>
           </div>
         </form>
         
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
+          <Text className="text-sm">
             Already have an account?{' '}
-            <Link href="/auth/login" className="font-medium text-amber-600 hover:text-amber-500">
+            <Button plain href="/auth/login" className="font-medium">
               Sign in
-            </Link>
-          </p>
+            </Button>
+          </Text>
         </div>
       </div>
     </div>

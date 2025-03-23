@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import { User } from '@supabase/supabase-js';
+import { Button } from '../../components/button';
+import { Text } from '../../components/text';
 
 interface Profile {
   id: string;
@@ -93,17 +95,18 @@ export default function ProfilePage() {
         
         {loading ? (
           <div className="flex justify-center items-center h-40">
-            <div className="text-amber-600">Loading profile...</div>
+            <Text className="text-amber-600">Loading profile...</Text>
           </div>
         ) : error ? (
           <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg p-4 mb-6">
-            <p>{error}</p>
-            <button 
+            <Text>{error}</Text>
+            <Button 
               onClick={() => router.push('/auth/login')}
-              className="mt-4 px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700"
+              color="amber"
+              className="mt-4"
             >
               Go to Login
-            </button>
+            </Button>
           </div>
         ) : (
           <div>
@@ -127,26 +130,26 @@ export default function ProfilePage() {
             <div className="mb-6">
               <h2 className="text-xl font-semibold mb-4">Account Information</h2>
               <div className="space-y-3">
-                <p><span className="font-medium">Email:</span> {user?.email}</p>
-                <p><span className="font-medium">Account ID:</span> {user?.id}</p>
-                <p><span className="font-medium">Subscription:</span> {user?.profile?.subscription_tier || 'Free'}</p>
+                <Text><span className="font-medium">Email:</span> {user?.email}</Text>
+                <Text><span className="font-medium">Account ID:</span> {user?.id}</Text>
+                <Text><span className="font-medium">Subscription:</span> {user?.profile?.subscription_tier || 'Free'}</Text>
               </div>
             </div>
             
             <div className="flex justify-between">
-              <button
+              <Button
                 onClick={() => router.push('/')}
-                className="px-4 py-2 border border-gray-300 text-gray-700 dark:text-gray-200 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700"
+                outline
               >
                 Back to Home
-              </button>
+              </Button>
               
-              <button
+              <Button
                 onClick={handleSignOut}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                color="red"
               >
                 Sign Out
-              </button>
+              </Button>
             </div>
           </div>
         )}
