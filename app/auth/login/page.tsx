@@ -59,26 +59,42 @@ export default function LoginPage() {
       setIsLoading(true);
       setErrorMessage(null);
       
+      // Attempt to sign in
       const { error, data: authData } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       });
       
       if (error) {
+        console.error('Login error:', error);
         setErrorMessage(error.message);
         return;
       }
       
       if (!authData.session) {
+        console.error('No session returned from login');
         setErrorMessage('Failed to create session. Please try again.');
         return;
       }
       
-      // Successful login, redirect
-      router.push(redirectTo);
+      // Double-check that we have a session after login
+      const { data: sessionCheck } = await supabase.auth.getSession();
+      
+      if (!sessionCheck.session) {
+        console.error('Session check failed after login');
+        setErrorMessage('Session validation failed. Please try again or clear your cookies.');
+        return;
+      }
+      
+      console.log('Login successful, redirecting to', redirectTo);
+      
+      // Successful login, redirect after a short delay to ensure session is stored
+      setTimeout(() => {
+        router.push(redirectTo);
+      }, 500);
       
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Unexpected login error:', error);
       setErrorMessage('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);

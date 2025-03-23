@@ -1,5 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
 
 // This route handles callbacks from Supabase Auth (email verification, password reset, etc.)
@@ -8,13 +7,29 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code');
   const next = requestUrl.searchParams.get('next') || '/';
   
+  // Prepare response for cookie manipulation
+  let response = NextResponse.redirect(new URL(next, request.url));
+  
   if (code) {
-    // Create a Supabase client for server-side operations using auth-helpers-nextjs
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
-    
-    // Exchange the code for a session
     try {
+      // Create a Supabase client for server-side operations using ssr package
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            get: (name) => request.cookies.get(name)?.value,
+            set: (name, value, options) => {
+              response.cookies.set({ name, value, ...options });
+            },
+            remove: (name, options) => {
+              response.cookies.set({ name, value: '', ...options, maxAge: 0 });
+            },
+          },
+        }
+      );
+      
+      // Exchange the code for a session
       await supabase.auth.exchangeCodeForSession(code);
       
       // Check if the session was created successfully
@@ -26,8 +41,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(new URL('/auth/login?error=verification_failed', request.url));
       }
       
-      // Redirect to the app after the session has been set successfully
-      return NextResponse.redirect(new URL(next, request.url));
+      // Use the response with cookies already set
+      return response;
     } catch (error) {
       console.error('Error exchanging code for session:', error);
       return NextResponse.redirect(new URL('/auth/login?error=verification_error', request.url));
