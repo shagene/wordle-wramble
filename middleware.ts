@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 
 // This middleware will run on all matching routes
 export async function middleware(request: NextRequest) {
@@ -8,21 +8,7 @@ export async function middleware(request: NextRequest) {
   let response = NextResponse.next();
   
   // Create a Supabase client configured for middleware
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name) => request.cookies.get(name)?.value,
-        set: (name, value, options) => {
-          response.cookies.set({ name, value, ...options });
-        },
-        remove: (name, options) => {
-          response.cookies.set({ name, value: '', ...options });
-        },
-      },
-    }
-  );
+  const supabase = createMiddlewareClient({ req: request, res: response });
   
   // Check if we have a session
   const {
@@ -33,10 +19,10 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // Define public routes that don't require authentication
-  const publicRoutes = ['/', '/auth/login', '/auth/signup', '/auth/reset-password'];
+  const publicRoutes = ['/', '/auth/login', '/auth/signup', '/auth/reset-password', '/auth/callback', '/test-supabase'];
   const isPublicRoute = publicRoutes.includes(pathname) || 
                          pathname.startsWith('/_next') || 
-                         pathname.startsWith('/api/auth');
+                         pathname.startsWith('/api/');
   
   // Define subscription-only routes
   const subscriptionRoutes = [
@@ -84,6 +70,12 @@ export const config = {
     '/account/:path*',  // Account settings
     '/voices/:path*',   // Voice selection
     '/progress/:path*', // Progress tracking
+    
+    // Auth routes for handling callbacks
+    '/auth/:path*',
+    
+    // Test routes
+    '/test-supabase',
     
     // Exclude static files, images, and API routes that don't need auth checking
     '/((?!_next/static|_next/image|favicon.ico|api/webhooks).*)',

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 // These types will be used for the database schema
 export type Database = {
@@ -135,31 +136,32 @@ export type Database = {
   };
 };
 
-// Create a single supabase client for interacting with your database
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+// Create a browser client for client-side components
+export const supabase = createClientComponentClient<Database>();
 
-export const supabase = createClient<Database>(
-  supabaseUrl,
-  supabaseAnonKey,
+// Create a direct client for API routes and server components
+export const supabaseAdmin = createClient<Database>(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
   {
     auth: {
-      persistSession: true,
-      autoRefreshToken: true,
+      persistSession: false,
+      autoRefreshToken: false,
     },
   }
 );
 
 // Helper to check if Supabase keys are configured
 export const isSupabaseConfigured = () => {
-  return supabaseUrl !== '' && supabaseAnonKey !== '';
+  return process.env.NEXT_PUBLIC_SUPABASE_URL !== '' && 
+         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== '';
 };
 
 // Helper to create a Supabase client with custom auth token
 export const createClientWithToken = (token: string) => {
   return createClient<Database>(
-    supabaseUrl,
-    supabaseAnonKey,
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
     {
       auth: {
         persistSession: false,

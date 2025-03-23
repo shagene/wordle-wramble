@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -17,13 +17,28 @@ const loginSchema = z.object({
 // Form data type
 type LoginFormValues = z.infer<typeof loginSchema>;
 
+// Error message mapping
+const errorMessages = {
+  verification_failed: 'Email verification failed. Please try signing in again or contact support.',
+  verification_error: 'There was a problem with your email verification. Please try again.',
+  // Add more error messages as needed
+};
+
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/';
+  const errorCode = searchParams.get('error');
   
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  useEffect(() => {
+    // Handle error from URL if present
+    if (errorCode && errorMessages[errorCode as keyof typeof errorMessages]) {
+      setErrorMessage(errorMessages[errorCode as keyof typeof errorMessages]);
+    }
+  }, [errorCode]);
   
   // Initialize form with react-hook-form and zod resolver
   const {
@@ -44,13 +59,18 @@ export default function LoginPage() {
       setIsLoading(true);
       setErrorMessage(null);
       
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error, data: authData } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       });
       
       if (error) {
         setErrorMessage(error.message);
+        return;
+      }
+      
+      if (!authData.session) {
+        setErrorMessage('Failed to create session. Please try again.');
         return;
       }
       
