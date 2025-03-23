@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -23,8 +22,6 @@ const signupSchema = z.object({
 type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function SignUpPage() {
-  const router = useRouter();
-  
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showVerificationMessage, setShowVerificationMessage] = useState(false);
@@ -104,7 +101,7 @@ export default function SignUpPage() {
         <div className="w-full max-w-md text-center">
           <h2 className="text-2xl font-semibold mb-4">Check your email</h2>
           <p className="mb-6">
-            We've sent you a verification link. Please check your email and click the link to complete your registration.
+            We&apos;ve sent you a verification link. Please check your email and click the link to complete your registration.
           </p>
           <Link href="/auth/login">
             <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500">

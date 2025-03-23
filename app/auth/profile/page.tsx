@@ -3,10 +3,28 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
+import { User } from '@supabase/supabase-js';
+
+interface Profile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  subscription_tier: string;
+  subscription_status: string;
+  stripe_customer_id: string | null;
+  subscription_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface UserWithProfile extends User {
+  profile?: Profile;
+}
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UserWithProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +47,7 @@ export default function ProfilePage() {
         }
         
         // Set user from session
-        setUser(session.user);
+        setUser(session.user as UserWithProfile);
         
         // Get additional profile data from the database
         const { data: profile, error: profileError } = await supabase
@@ -42,7 +60,10 @@ export default function ProfilePage() {
           console.warn('Error fetching profile:', profileError);
         } else if (profile) {
           // Merge profile data with user
-          setUser((prev: any) => ({ ...prev, profile }));
+          setUser((prev: UserWithProfile | null) => {
+            if (!prev) return null;
+            return { ...prev, profile };
+          });
         }
         
       } catch (error) {

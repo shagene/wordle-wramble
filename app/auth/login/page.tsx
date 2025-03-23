@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -24,7 +24,8 @@ const errorMessages = {
   // Add more error messages as needed
 };
 
-export default function LoginPage() {
+// Wrapper component to handle suspense
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/';
@@ -180,5 +181,14 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Export the suspense-wrapped component
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
+      <LoginPageContent />
+    </Suspense>
   );
 } 

@@ -123,7 +123,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   // Return the provider with the value and children
-  return React.createElement(AuthContext.Provider, { value, children });
+  return React.createElement(
+    AuthContext.Provider,
+    { value },
+    children
+  );
 };
 
 // Custom hook to use the auth context

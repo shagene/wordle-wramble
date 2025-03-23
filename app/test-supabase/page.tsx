@@ -2,10 +2,18 @@
 
 import { useState, useEffect } from 'react';
 
+interface TestResult {
+  success: boolean;
+  message?: string;
+  error?: string | boolean;
+  timestamp?: string;
+  sessionStatus?: string;
+}
+
 export default function TestSupabase() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Testing Supabase connection...');
-  const [details, setDetails] = useState<any>(null);
+  const [details, setDetails] = useState<TestResult | null>(null);
 
   useEffect(() => {
     async function testConnection() {
@@ -25,7 +33,7 @@ export default function TestSupabase() {
       } catch (error) {
         setStatus('error');
         setMessage(error instanceof Error ? error.message : 'Unknown error occurred');
-        setDetails({ error: true });
+        setDetails({ success: false, error: true });
       }
     }
     
