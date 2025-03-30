@@ -6,6 +6,7 @@ import { useSupabaseAuth } from '@/app/hooks/useSupabaseAuth';
 import { Heading } from '@/app/components/heading';
 import { Button } from '@/app/components/button';
 import Link from 'next/link';
+import { GameProvider } from '@/app/game/context/GameContext';
 
 export default function HomePage() {
   const { user, isLoading } = useSupabaseAuth();
@@ -55,7 +56,9 @@ export default function HomePage() {
       {!user && !isLoading && (
         <div className="mt-10 w-full max-w-md bg-white/70 backdrop-blur-sm rounded-lg shadow-md p-6 dark:bg-gray-800/70">
           <h2 className="text-xl font-semibold mb-4 text-center">Try a Demo Wordle</h2>
-          <WordleGame isDemo={true} />
+          <GameProvider>
+            <WordleGame isDemo={true} />
+          </GameProvider>
           
           <div className="mt-6 text-center">
             <Link href="/auth/login">
