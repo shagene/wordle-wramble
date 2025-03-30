@@ -4,7 +4,15 @@ import { Bubblegum_Sans } from "next/font/google";
 import "./globals.css";
 import { FooterWrapper } from "@/app/ui/FooterWrapper";
 import { AuthProvider } from './hooks/useAuth';
-import AuthNav from './components/auth-nav';
+import AuthNav from '@/app/ui/auth/AuthNav';
+import EnvChecker from '@/app/ui/debug/EnvChecker';
+import ServerEnvCheck from '@/app/ui/debug/ServerEnvCheck';
+
+// Log environment variables at the root layout level
+console.log('[layout.tsx] Module initializing');
+console.log('[layout.tsx] Environment check:');
+console.log('[layout.tsx] NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'defined' : 'undefined');
+console.log('[layout.tsx] NEXT_PUBLIC_SUPABASE_ANON_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'defined' : 'undefined');
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,11 +43,19 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  console.log('[RootLayout] Rendering...');
+  console.log('[RootLayout] Environment from function:');
+  console.log('[RootLayout] NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'defined' : 'undefined');
+  console.log('[RootLayout] NEXT_PUBLIC_SUPABASE_ANON_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'defined' : 'undefined');
+  
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${bubblegumSans.variable} antialiased bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-950 dark:to-indigo-950 min-h-screen`}
       >
+        <ServerEnvCheck />
+        <EnvChecker />
+        
         <AuthProvider>
           <AuthNav />
           <div className="container mx-auto px-4 py-8 max-w-6xl flex flex-col min-h-screen">

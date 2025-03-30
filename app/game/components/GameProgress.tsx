@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { WordList, WordProgress } from '../types';
 import { useGameContext } from '../context/GameContext';
+import { useSupabaseAuth } from '@/app/hooks/useSupabaseAuth';
+import { getUserWordProgress } from '@/app/services/wordListService';
 
 type GameProgressProps = {
   wordList: WordList;
@@ -10,20 +12,44 @@ type GameProgressProps = {
 
 export function GameProgress({ wordList }: GameProgressProps) {
   const { currentWordIndex } = useGameContext();
+  const { userId } = useSupabaseAuth();
   const [, setProgress] = useState<{[word: string]: WordProgress}>({});
   
   useEffect(() => {
-    // Load progress from localStorage
-    try {
-      if (typeof window !== 'undefined') {
-        const savedProgress = JSON.parse(localStorage.getItem('wordleProgress') || '{}');
-        const listProgress = savedProgress[wordList.id] || {};
-        setProgress(listProgress);
+    // Load progress from Supabase
+    const loadProgress = async () => {
+      if (!userId || !wordList.id) return;
+      
+      try {
+        const { data, error } = await getUserWordProgress(userId, wordList.id);
+        
+        if (error) {
+          console.error('Error loading progress:', error);
+          return;
+        }
+        
+        // Format the data into the expected structure
+        const formattedProgress: {[word: string]: WordProgress} = {};
+        
+        if (data) {
+          data.forEach(item => {
+            formattedProgress[item.word] = {
+              completed: item.completed,
+              attempts: item.attempts,
+              timestamp: item.timestamp,
+              stars: item.attempts === 1 ? 3 : item.attempts === 2 ? 2 : 1
+            };
+          });
+        }
+        
+        setProgress(formattedProgress);
+      } catch (error) {
+        console.error('Error loading progress:', error);
       }
-    } catch (error) {
-      console.error('Error loading progress:', error);
-    }
-  }, [wordList.id]);
+    };
+    
+    loadProgress();
+  }, [wordList.id, userId]);
   
   // Define emoji for each progress step - expanded collection for more variety
   const progressEmojis = ['🚀', '🌟', '🎮', '🎯', '🎨', '🎪', '🎭', '🎢', '🎡', '🧩', '🦄', '🐶', '🦊', '🦁', '🐱', '🦋', '🐢', '🐬', '🦉', '🦜', '🍎', '🍓', '🥝', '🍦', '🧸'];

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Achievement, WordList, AllProgress } from "../types";
+import { getUserProgress, getUserWordLists } from "@/app/services/wordListService";
+import { useSupabaseAuth } from "@/app/hooks/useSupabaseAuth";
 
 // Function to get star count based on attempts
 const getStarsForAttempts = (attempts: number): number => {
@@ -29,6 +31,7 @@ type ProgressDataLoaderProps = {
 };
 
 export function ProgressDataLoader({ children }: ProgressDataLoaderProps) {
+  const { userId } = useSupabaseAuth();
   const [wordLists, setWordLists] = useState<WordList[]>([]);
   const [progress, setProgress] = useState<AllProgress>({});
   const [loading, setLoading] = useState(true);
@@ -113,74 +116,116 @@ export function ProgressDataLoader({ children }: ProgressDataLoaderProps) {
     },
   ]);
   
-  // Load word lists and progress from localStorage
+  // Load word lists and progress from Supabase
   useEffect(() => {
-    const loadData = () => {
+    const loadData = async () => {
+      if (!userId) {
+        setLoading(false);
+        return;
+      }
+      
       try {
         setLoading(true);
         
-        if (typeof window !== 'undefined') {
-          // Load word lists
-          const savedLists = JSON.parse(localStorage.getItem('wordLists') || '[]');
-          setWordLists(savedLists);
-          
-          // Load progress data
-          const savedProgress = JSON.parse(localStorage.getItem('wordleProgress') || '{}');
-          setProgress(savedProgress);
-          
-          // Calculate statistics
-          let stars = 0;
-          let completed = 0;
-          let attempted = 0;
-          let perfectWords = 0;
-          
-          Object.keys(savedProgress).forEach(listId => {
-            Object.keys(savedProgress[listId]).forEach(word => {
-              const wordData = savedProgress[listId][word];
-              if (wordData.completed) {
-                completed++;
-                const starCount = wordData.stars || getStarsForAttempts(wordData.attempts);
-                stars += starCount;
-                
-                // Count perfect words (completed in first attempt)
-                if (wordData.attempts === 1) {
-                  perfectWords++;
-                }
-              }
-              attempted++;
-            });
-          });
-          
-          setStats({
-            totalStars: stars,
-            totalWordsCompleted: completed,
-            totalWordsAttempted: attempted,
-            perfectWords: perfectWords
-          });
-          
-          // Update achievements based on stats using the function form of setState
-          setAchievements(prevAchievements => 
-            prevAchievements.map(achievement => {
-              let unlocked = false;
-              let progress = 0;
-              
-              // Check thresholds for different achievement types
-              if (achievement.id === 'perfect_speller') {
-                unlocked = perfectWords >= achievement.threshold;
-                progress = perfectWords;
-              } else if (achievement.id === 'wordle_wizard') {
-                unlocked = completed >= achievement.threshold;
-                progress = completed;
-              } else {
-                // Star-based achievements
-                unlocked = stars >= achievement.threshold;
-                progress = stars;
-              }
-              
-              return { ...achievement, unlocked, progress };
-            })
-          );
+        // Load word lists from Supabase
+        const { data: listsData, error: listsError } = await getUserWordLists(userId);
+        
+        if (listsError) {
+          console.error('Error loading word lists:', listsError);
+          setLoading(false);
+          return;
         }
+        
+        if (listsData) {
+          setWordLists(listsData.map(list => ({
+            id: list.id,
+            name: list.name,
+            words: list.words,
+            hints: list.hints || [],
+            dateCreated: list.created_at
+          })));
+        }
+        
+        // Load progress data from Supabase
+        const { data: progressData, error: progressError } = await getUserProgress(userId);
+        
+        if (progressError) {
+          console.error('Error loading progress:', progressError);
+          setLoading(false);
+          return;
+        }
+        
+        // Format progress data into the expected structure
+        const formattedProgress: AllProgress = {};
+        
+        if (progressData) {
+          progressData.forEach(item => {
+            if (!formattedProgress[item.list_id]) {
+              formattedProgress[item.list_id] = {};
+            }
+            
+            formattedProgress[item.list_id][item.word] = {
+              completed: item.completed,
+              attempts: item.attempts,
+              timestamp: item.timestamp,
+              stars: getStarsForAttempts(item.attempts)
+            };
+          });
+        }
+        
+        setProgress(formattedProgress);
+        
+        // Calculate statistics
+        let stars = 0;
+        let completed = 0;
+        let attempted = 0;
+        let perfectWords = 0;
+        
+        if (progressData) {
+          progressData.forEach(item => {
+            if (item.completed) {
+              completed++;
+              const starCount = getStarsForAttempts(item.attempts);
+              stars += starCount;
+              
+              // Count perfect words (completed in first attempt)
+              if (item.attempts === 1) {
+                perfectWords++;
+              }
+            }
+            attempted++;
+          });
+        }
+        
+        setStats({
+          totalStars: stars,
+          totalWordsCompleted: completed,
+          totalWordsAttempted: attempted,
+          perfectWords: perfectWords
+        });
+        
+        // Update achievements based on stats
+        setAchievements(prevAchievements => 
+          prevAchievements.map(achievement => {
+            let unlocked = false;
+            let progress = 0;
+            
+            // Check thresholds for different achievement types
+            if (achievement.id === 'perfect_speller') {
+              unlocked = perfectWords >= achievement.threshold;
+              progress = perfectWords;
+            } else if (achievement.id === 'wordle_wizard') {
+              unlocked = completed >= achievement.threshold;
+              progress = completed;
+            } else {
+              // Star-based achievements
+              unlocked = stars >= achievement.threshold;
+              progress = stars;
+            }
+            
+            return { ...achievement, unlocked, progress };
+          })
+        );
         
         setLoading(false);
       } catch (error) {
@@ -190,7 +235,7 @@ export function ProgressDataLoader({ children }: ProgressDataLoaderProps) {
     };
     
     loadData();
-  }, []); // Empty dependency array is fine now
+  }, [userId]); // Depend on userId
 
   return (
     <>

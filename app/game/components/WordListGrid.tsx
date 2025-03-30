@@ -1,46 +1,79 @@
 'use client';
 
-import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { WordList } from '../types';
 import { WordListCard } from './WordListCard';
+import { useRouter } from 'next/navigation';
+import { ROUTES } from '@/app/lib/navigation/routes';
+import { useSupabaseAuth } from '@/app/hooks/useSupabaseAuth';
 
 type WordListGridProps = {
   wordLists: WordList[];
-  onSelectList: (list: WordList) => void;
+  onDelete?: () => void;
 };
 
-export function WordListGrid({ wordLists: initialWordLists, onSelectList }: WordListGridProps) {
-  // Maintain local state for word lists
-  const [wordLists, setWordLists] = useState<WordList[]>(initialWordLists);
-
-  // Update local state when props change
+export function WordListGrid({ wordLists, onDelete }: WordListGridProps) {
+  const router = useRouter();
+  const { userId } = useSupabaseAuth();
+  const [lists, setLists] = useState<WordList[]>([]);
+  
+  // Initialize state from props when component mounts or props change
   useEffect(() => {
-    setWordLists(initialWordLists);
-  }, [initialWordLists]);
+    console.log('WordListGrid: Updating lists from props:', wordLists.length);
+    setLists(wordLists);
+  }, [wordLists]);
+  
+  // Navigate to the selected word list's game page
+  const handleListClick = (list: WordList) => {
+    if (!userId) {
+      // If no user ID, redirect to login with return URL
+      const returnUrl = ROUTES.GAME.PLAY(list.id);
+      router.push(`/auth/login?redirect=${encodeURIComponent(returnUrl)}`);
+      return;
+    }
 
-  // Handle deletion of a word list
-  const handleDelete = (id: string) => {
-    setWordLists(prevLists => prevLists.filter(list => list.id !== id));
+    // If we have a user ID, navigate to the game
+    router.push(ROUTES.GAME.PLAY(list.id));
   };
-
+  
+  // Handle list deletion by removing it from state
+  const handleListDelete = (listId: string) => {
+    console.log('WordListGrid: Removing list from UI state:', listId);
+    setLists(prevLists => {
+      const updatedLists = prevLists.filter(list => list.id !== listId);
+      console.log(`WordListGrid: Lists reduced from ${prevLists.length} to ${updatedLists.length}`);
+      return updatedLists;
+    });
+    
+    // Call the parent's onDelete handler if provided
+    if (onDelete) {
+      console.log('WordListGrid: Notifying parent component of deletion');
+      onDelete();
+    }
+  };
+  
+  // If no lists, render a message instead
+  if (!lists?.length) {
+    return (
+      <div className="w-full text-center py-8">
+        <p className="text-lg text-gray-500 dark:text-gray-400">No word lists found.</p>
+        <p className="mt-2 text-gray-400 dark:text-gray-500">
+          Create a new list to get started.
+        </p>
+      </div>
+    );
+  }
+  
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mx-auto p-4">
-      {wordLists.map((list) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full max-w-6xl mx-auto py-8">
+      {lists.map(list => (
         <WordListCard 
           key={list.id} 
           list={list} 
-          onClick={onSelectList}
-          onDelete={handleDelete}
+          onClick={() => handleListClick(list)}
+          onDelete={handleListDelete}
         />
       ))}
-      
-      <Link href="/wordlist/create" className="block">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-2 border-dashed border-green-400 hover:border-green-500 transition-all cursor-pointer h-full flex flex-col items-center justify-center animate-in fade-in">
-          <div className="text-4xl text-green-500 mb-4">+</div>
-          <h3 className="text-xl font-bold text-green-600 dark:text-green-400">Create New Wordle</h3>
-        </div>
-      </Link>
     </div>
   );
 }

@@ -4,94 +4,105 @@ import { createServerClient } from '@supabase/ssr';
 
 // This middleware will run on all matching routes
 export async function middleware(request: NextRequest) {
-  // Create a response to modify
-  let response = NextResponse.next();
+  // Initialize response
+  const response = NextResponse.next();
   
-  // Create a Supabase client configured for middleware
+  // Create Supabase client with proper cookie handling
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (name) => request.cookies.get(name)?.value,
-        set: (name, value, options) => {
-          response.cookies.set({ name, value, ...options });
+        get(name) {
+          try {
+            const cookie = request.cookies.get(name);
+            if (!cookie) return null;
+            return cookie.value;
+          } catch (error) {
+            console.error(`Error getting cookie ${name}:`, error);
+            return null;
+          }
         },
-        remove: (name, options) => {
-          response.cookies.set({ name, value: '', ...options });
+        set(name, value, options) {
+          try {
+            // If the cookie is updated, update the response as well
+            response.cookies.set({
+              name,
+              value,
+              ...options,
+            });
+          } catch (error) {
+            console.error(`Error setting cookie ${name}:`, error);
+          }
+        },
+        remove(name, options) {
+          try {
+            // If the cookie is removed, update the response as well
+            response.cookies.set({
+              name,
+              value: '',
+              ...options,
+              maxAge: 0,
+            });
+          } catch (error) {
+            console.error(`Error removing cookie ${name}:`, error);
+          }
         },
       },
     }
   );
-  
-  // Check if we have a session
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
 
-  // Get the current pathname
-  const { pathname } = request.nextUrl;
-  
-  // Define public routes that don't require authentication
-  const publicRoutes = ['/', '/auth/login', '/auth/signup', '/auth/reset-password', '/auth/callback', '/test-supabase'];
-  const isPublicRoute = publicRoutes.includes(pathname) || 
-                         pathname.startsWith('/_next') || 
-                         pathname.startsWith('/api/');
-  
-  // Define subscription-only routes
-  const subscriptionRoutes = [
-    '/game/premium',        // Premium game features
-    '/account/subscription', // Subscription management
-    '/voices/premium',       // Premium voice selection
-  ];
-  const isSubscriptionRoute = subscriptionRoutes.some(route => pathname.startsWith(route));
-  
-  // Redirect logic based on authentication and route type
-  if (!session && !isPublicRoute) {
-    // If trying to access a protected route without a session, redirect to login
-    const redirectUrl = new URL('/auth/login', request.url);
-    redirectUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(redirectUrl);
-  }
-  
-  // If the user is trying to access subscription-only route, check their subscription
-  if (session && isSubscriptionRoute) {
-    // Fetch user profile to check subscription
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('subscription_tier, subscription_status')
-      .eq('id', session.user.id)
-      .single();
+  try {
+    // Refresh the session
+    const { data: { session } } = await supabase.auth.getSession();
+
+    // Authentication handling
+    const path = request.nextUrl.pathname;
     
-    // If the user doesn't have an active paid subscription, redirect to upgrade page
-    if (!profile || 
-        profile.subscription_tier === 'free' || 
-        profile.subscription_status !== 'active') {
-      return NextResponse.redirect(new URL('/account/upgrade', request.url));
+    // Public paths that don't require auth
+    const isPublicPath = [
+      '/',
+      '/auth/login',
+      '/auth/signup',
+      '/auth/reset-password',
+      '/auth/callback',
+    ].includes(path) || path.startsWith('/_next') || path.startsWith('/api');
+    
+    // Auth paths that should redirect logged-in users
+    const isAuthPath = [
+      '/auth/login',
+      '/auth/signup',
+      '/auth/reset-password',
+    ].includes(path);
+    
+    // Protected paths that require auth
+    const isProtectedPath = path.startsWith('/game') || 
+                            path.startsWith('/wordlist') || 
+                            path.startsWith('/account');
+
+    // If user is logged in and tries to access auth paths, redirect to home
+    if (session && isAuthPath) {
+      console.log('Middleware: User is logged in, redirecting from auth page to home');
+      return NextResponse.redirect(new URL('/', request.url));
     }
+
+    // If user is not logged in and tries to access protected paths, redirect to login
+    if (!session && isProtectedPath) {
+      console.log('Middleware: User is not logged in, redirecting to login');
+      const redirectUrl = encodeURIComponent(path);
+      return NextResponse.redirect(new URL(`/auth/login?redirect=${redirectUrl}`, request.url));
+    }
+  } catch (error) {
+    console.error('Middleware error:', error);
   }
-  
-  // Continue with the modified response
+
   return response;
 }
 
 // Configure the middleware to run on specific paths
 export const config = {
   matcher: [
-    // Routes that require protection:
-    '/game/:path*',    // Game routes
-    '/wordlist/:path*', // Word list management
-    '/account/:path*',  // Account settings
-    '/voices/:path*',   // Voice selection
-    '/progress/:path*', // Progress tracking
-    
-    // Auth routes for handling callbacks
-    '/auth/:path*',
-    
-    // Test routes
-    '/test-supabase',
-    
-    // Exclude static files, images, and API routes that don't need auth checking
-    '/((?!_next/static|_next/image|favicon.ico|api/webhooks).*)',
+    // Match all paths except static files, api routes, and Next.js specific paths
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }; 

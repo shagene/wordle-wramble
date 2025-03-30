@@ -1,60 +1,96 @@
-import { Header, NavButton, WordleGame } from "./ui";
-import { GameProvider } from "./game/context/GameContext";
+'use client';
 
-export default function Home() {
+import { Header, NavButton } from "@/app/ui";
+import { WordleGame } from "@/app/ui";
+import { useSupabaseAuth } from '@/app/hooks/useSupabaseAuth';
+import { Heading } from '@/app/components/heading';
+import { Button } from '@/app/components/button';
+import Link from 'next/link';
+
+export default function HomePage() {
+  const { user, isLoading } = useSupabaseAuth();
+  
   return (
-    <div className="flex flex-col items-center justify-center min-h-[80vh] text-center">
+    <div className="flex flex-col items-center">
       <Header />
-
-      <main className="animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300 w-full max-w-2xl mx-auto mb-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4">
-          <NavButton
-            color="blue"
-            href="/game"
-            icon="🎮"
-            ariaLabel="Play the Word Game"
-          >
-            Play Game
-          </NavButton>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
+        <NavButton 
+          href="/game"
+          icon="🎮"
+          color="blue"
+          ariaLabel="Play Wordles"
+        >
+          Play Wordles
+        </NavButton>
+        
+        <NavButton 
+          href="/wordlist/create"
+          icon="✏️"
+          color="green"
+          ariaLabel="Create Wordle"
+        >
+          Create Wordle
+        </NavButton>
+        
+        <NavButton 
+          href="/progress"
+          icon="⭐"
+          color="amber"
+          ariaLabel="See your star progress"
+        >
+          See Progress
+        </NavButton>
+        
+        <NavButton 
+          href="/share"
+          icon="📤"
+          color="purple"
+          ariaLabel="Share Wordles"
+        >
+          Share Wordles
+        </NavButton>
+      </div>
+      
+      {!user && !isLoading && (
+        <div className="mt-10 w-full max-w-md bg-white/70 backdrop-blur-sm rounded-lg shadow-md p-6 dark:bg-gray-800/70">
+          <h2 className="text-xl font-semibold mb-4 text-center">Try a Demo Wordle</h2>
+          <WordleGame isDemo={true} />
           
-          <NavButton
-            color="green"
-            href="/wordlist/create"
-            icon="✏️"
-            ariaLabel="Add your spelling words"
-          >
-            Add Words
-          </NavButton>
-          
-          <NavButton
-            color="amber"
-            href="/progress"
-            icon="⭐"
-            ariaLabel="See your star progress"
-          >
-            See Stars
-          </NavButton>
-          
-          <NavButton
-            color="purple"
-            href="/share"
-            icon="🔗"
-            ariaLabel="Share your word lists"
-          >
-            Share It
-          </NavButton>
+          <div className="mt-6 text-center">
+            <Link href="/auth/login">
+              <Button color="blue">
+                Sign in to create your own
+              </Button>
+            </Link>
+          </div>
         </div>
-      </main>
-
-      <div className="relative w-full max-w-xs md:max-w-md mx-auto mb-8 animate-in fade-in duration-1000 delay-500">
-        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-yellow-400 to-pink-500 rounded-full filter blur-3xl opacity-20 animate-pulse"></div>
-        <div className="relative z-10">
-          <GameProvider>
-            <WordleGame 
-              words={['CAT', 'DOG', 'SUN']} 
-              isDemo={true} 
-            />
-          </GameProvider>
+      )}
+      
+      {/* Debug Section */}
+      <div className="w-full max-w-3xl border-t border-gray-200 dark:border-gray-700 pt-8 mt-12">
+        <Heading level={3} className="text-lg mb-4 text-gray-600 dark:text-gray-400">
+          Debug Tools
+        </Heading>
+        
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+          <Link href="/test">
+            <Button outline className="w-full">
+              Supabase Test
+            </Button>
+          </Link>
+          
+          <Link href="/debug">
+            <Button outline className="w-full">
+              Environment Debug
+            </Button>
+          </Link>
+          
+          <Link href="/debug/supabase">
+            <Button outline className="w-full">
+              Supabase Debug
+            </Button>
+          </Link>
         </div>
       </div>
     </div>

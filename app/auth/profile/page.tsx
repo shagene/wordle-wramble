@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../lib/supabase';
+import { getClientSupabase } from '../../lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { Button } from '../../components/button';
 import { Text } from '../../components/text';
@@ -39,6 +39,12 @@ export default function ProfilePage() {
       try {
         setLoading(true);
         
+        const supabase = getClientSupabase();
+        if (!supabase) {
+          setError('Failed to connect to authentication service');
+          return;
+        }
+        
         // Get current session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
@@ -71,7 +77,6 @@ export default function ProfilePage() {
             return { ...prev, profile };
           });
         }
-        
       } catch (error) {
         console.error('Error loading profile:', error);
         setError(error instanceof Error ? error.message : 'Failed to load profile');
@@ -85,6 +90,12 @@ export default function ProfilePage() {
 
   const handleSignOut = async () => {
     try {
+      const supabase = getClientSupabase();
+      if (!supabase) {
+        setError('Failed to connect to authentication service');
+        return;
+      }
+      
       await supabase.auth.signOut();
       router.push('/auth/login');
     } catch (error) {

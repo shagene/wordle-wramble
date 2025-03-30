@@ -1,59 +1,39 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { supabase } from '../lib/supabase';
-import { User } from '@supabase/supabase-js';
-import { Navbar, NavbarSection, NavbarSpacer } from './navbar';
-import { Avatar } from './avatar';
+import { useAuth } from '../../hooks/useAuth';
+import { Navbar, NavbarSection, NavbarSpacer } from '../../components/navbar';
+import { Avatar } from '../../components/avatar';
 import { 
   Dropdown, 
   DropdownButton as DropdownButton,
   DropdownMenu as DropdownItems,
   DropdownItem as DropdownItem,
   DropdownDivider as DropdownSeparator
-} from './dropdown';
+} from '../../components/dropdown';
 
 export default function AuthNav() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  console.log('[AuthNav] Rendering or executing...');
+  const { user, isLoading: authLoading, signOut } = useAuth();
   const pathname = usePathname();
   
-  const isLoginPage = pathname === '/auth/login';
-  const isSignupPage = pathname === '/auth/signup';
-  const isAuthPage = isLoginPage || isSignupPage;
-
-  useEffect(() => {
-    async function getSession() {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setUser(session?.user || null);
-      } catch (error) {
-        console.error('Error getting session:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    getSession();
-
-    // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user || null);
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+  // Check if we're on an auth page
+  const isLoginPage = pathname === '/auth/login' || pathname.startsWith('/auth/login?');
+  const isSignupPage = pathname === '/auth/signup' || pathname.startsWith('/auth/signup?');
+  const isAuthPage = isLoginPage || isSignupPage || pathname.startsWith('/auth/');
 
   // Get initials from email for avatar
   const getInitials = (email: string | undefined) => {
     if (!email) return '??';
     return email.substring(0, 2).toUpperCase();
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    // Redirect to home after sign out
+    // Consider using router.push('/') if using Next navigation hooks
+    window.location.href = '/'; 
   };
 
   return (
@@ -75,7 +55,7 @@ export default function AuthNav() {
           <NavbarSpacer />
           
           <NavbarSection>
-            {loading ? (
+            {authLoading ? (
               <div className="animate-pulse bg-blue-100 h-8 w-20 rounded-full"></div>
             ) : user ? (
               <Dropdown>
@@ -97,10 +77,7 @@ export default function AuthNav() {
                   </DropdownItem>
                   <DropdownSeparator />
                   <DropdownItem 
-                    onClick={async () => {
-                      await supabase.auth.signOut();
-                      window.location.href = '/';
-                    }}
+                    onClick={handleSignOut}
                   >
                     <div data-slot="icon" className="fill-purple-500">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="size-5">
@@ -130,33 +107,29 @@ export default function AuthNav() {
                 ) : (
                   /* Show regular auth buttons when not on auth pages */
                   <>
-                    {!isLoginPage && (
-                      <a 
-                        href="/auth/login"
-                        className="bg-blue-500 text-white rounded-lg shadow-lg hover:shadow-blue-200 dark:hover:shadow-blue-900 text-xl px-4 py-2 hover:scale-105 transition-transform duration-300 font-[family-name:var(--font-bubblegum-sans)]"
-                      >
-                        <div className="flex items-center justify-center gap-2">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                            <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
-                          </svg>
-                          <span>Sign In</span>
-                        </div>
-                      </a>
-                    )}
+                    <Link 
+                      href="/auth/login"
+                      className="bg-blue-500 text-white rounded-lg shadow-lg hover:shadow-blue-200 dark:hover:shadow-blue-900 text-xl px-4 py-2 hover:scale-105 transition-transform duration-300 font-[family-name:var(--font-bubblegum-sans)]"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                          <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+                        </svg>
+                        <span>Sign In</span>
+                      </div>
+                    </Link>
                     
-                    {!isSignupPage && (
-                      <a 
-                        href="/auth/signup"
-                        className="bg-purple-500 text-white rounded-lg shadow-lg hover:shadow-purple-200 dark:hover:shadow-purple-900 text-xl px-4 py-2 hover:scale-105 transition-transform duration-300 font-[family-name:var(--font-bubblegum-sans)]"
-                      >
-                        <div className="flex items-center justify-center gap-2">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                            <path fillRule="evenodd" d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z" clipRule="evenodd" />
-                          </svg>
-                          <span>Sign Up</span>
-                        </div>
-                      </a>
-                    )}
+                    <Link 
+                      href="/auth/signup"
+                      className="bg-purple-500 text-white rounded-lg shadow-lg hover:shadow-purple-200 dark:hover:shadow-purple-900 text-xl px-4 py-2 hover:scale-105 transition-transform duration-300 font-[family-name:var(--font-bubblegum-sans)]"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                          <path fillRule="evenodd" d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z" clipRule="evenodd" />
+                        </svg>
+                        <span>Sign Up</span>
+                      </div>
+                    </Link>
                   </>
                 )}
               </div>

@@ -78,12 +78,17 @@ export function createTempWordList(sharedData: {
   words: string[];
   hints?: string[];
 }): WordList {
+  const currentTime = new Date().toISOString();
   return {
     id: `temp-${Date.now()}`,
+    user_id: 'temp-user',
     name: sharedData.name,
+    description: null,
+    is_public: false,
     words: sharedData.words,
-    hints: sharedData.hints || [],
-    dateCreated: new Date().toISOString()
+    hints: sharedData.hints || null,
+    created_at: currentTime,
+    updated_at: currentTime
   };
 }
 
@@ -100,13 +105,18 @@ export function saveSharedWordList(sharedData: {
   // Get existing lists from localStorage
   const existingLists = JSON.parse(localStorage.getItem('wordLists') || '[]');
   
+  const currentTime = new Date().toISOString();
   // Create a new list object with a unique ID
   const newList: WordList = {
     id: `shared-${Date.now()}`,
+    user_id: 'shared-user',
     name: `${sharedData.name} (Shared)`,
+    description: null,
+    is_public: false,
     words: sharedData.words,
-    hints: sharedData.hints || [],
-    dateCreated: new Date().toISOString()
+    hints: sharedData.hints || null,
+    created_at: currentTime,
+    updated_at: currentTime
   };
   
   // Add the new list to existing lists

@@ -77,3 +77,72 @@ The application is configured for deployment on Vercel. The main branch is autom
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Migration to Supabase & Subscription Model
+
+Wordle Wramble is transitioning from a client-side application that uses localStorage to a full-stack application with Supabase for backend services. This migration includes:
+
+1. User authentication and accounts
+2. Data migration from localStorage to Supabase
+3. Tiered subscription model using Stripe
+4. Optimized ElevenLabs API usage based on subscription levels
+
+### Setting Up the Database
+
+To set up the Supabase database schema:
+
+1. Create a Supabase project at [supabase.com](https://supabase.com)
+2. Copy your project URL and API keys to `.env.local` following the `.env.example` format:
+   - `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anon key
+   - `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase service role key (from Project Settings → API)
+3. Execute the SQL scripts in the Supabase Dashboard:
+   - Go to your Supabase project dashboard
+   - Navigate to "SQL Editor" in the left sidebar
+   - Open and run the file `migrations/01_initial_schema.sql` to create all tables
+   - Open and run the file `migrations/02_rls_policies.sql` to set up Row Level Security
+
+4. Create storage buckets in the Supabase Dashboard:
+   - Navigate to "Storage" in the left sidebar
+   - Create a new bucket named `audio-cache` (set to public)
+   - Create a new bucket named `user-uploads` (set to private)
+
+Alternatively, for more automated bucket creation, you can run:
+```bash
+pnpm init:supabase
+```
+
+This will create all necessary tables, RLS policies, and storage buckets.
+
+### Subscription Tiers
+
+The application offers three subscription tiers:
+
+- **Free Tier**
+  - 5 words per list
+  - 2 word lists maximum
+  - Basic voice selection (2 voices)
+  - Limited daily audio generations (10 per day)
+
+- **Basic Tier ($3.99/month)**
+  - 30 words per list
+  - 10 word lists maximum
+  - Extended voice selection (5 voices)
+  - Increased audio generations (50 per day)
+
+- **Premium Tier ($7.99/month)**
+  - Unlimited words per list
+  - Unlimited word lists
+  - All available voices
+  - Unlimited audio generations
+
+Special educator pricing (50% discount) is available with verification.
+
+### Data Migration
+
+When users first sign in, they'll be prompted to migrate their existing data from localStorage to their Supabase account. The migration process:
+
+1. Collects all word lists and progress from localStorage
+2. Applies appropriate limits based on the user's subscription tier
+3. Transfers the data to Supabase with progress tracking
+4. Preserves localStorage data as a backup until explicitly deleted

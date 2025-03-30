@@ -14,7 +14,7 @@ type SharedListData = {
 };
 
 export default function SharedListPage() {
-  const params = useParams();
+  const params = useParams<{ id: string }>();
   const router = useRouter();
   const [sharedList, setSharedList] = useState<SharedListData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,7 +33,7 @@ export default function SharedListPage() {
         }
         
         // Decode the shared list data using our utility function
-        const decodedData = decodeWordList(params.id as string);
+        const decodedData = decodeWordList(params.id);
         
         if (!decodedData) {
           setError('Invalid shared list data');

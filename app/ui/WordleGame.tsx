@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useGameContext } from '../game/context/GameContext';
 import { HintButton } from '.';
 import type { ReactElement } from 'react';
+import { useSupabaseAuth } from '@/app/hooks/useSupabaseAuth';
 
 // Import our refactored components
 import {
@@ -25,6 +26,7 @@ export function WordleGame({
   isDemo = false,
   onComplete
 }: WordleGameProps): ReactElement {
+  const { userId } = useSupabaseAuth();
   const { currentWordIndex, setCurrentWordIndex } = useGameContext();
   
   // Game state
@@ -149,11 +151,11 @@ export function WordleGame({
       const newWordResults = [...wordResults, {word: currentWord, attempts: attempts + 1, completed: true}];
       setWordResults(newWordResults);
       
-      // Save progress to localStorage
+      // Save progress to Supabase or localStorage
       if (!isDemo) {
         const pathname = window.location.pathname;
         const listId = pathname.split('/').pop() || 'unknown';
-        saveProgress(listId, currentWord, attempts + 1, isDemo);
+        saveProgress(listId, currentWord, attempts + 1, isDemo, userId);
       }
       
       if (onComplete) {
