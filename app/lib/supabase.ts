@@ -451,20 +451,26 @@ export const getClientSupabase = () => {
   }
 
   try {
-    // --- DRASTIC SIMPLIFICATION --- 
-    // Hardcode values directly here to test client creation
-    const supabaseUrl = 'https://gwvhbimnktyovdmdcdnm.supabase.co';
-    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3dmhiaW1ua3R5b3ZkbWRjZG5tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2MTA0OTcsImV4cCI6MjA1ODE4NjQ5N30.AMUH2C4ESS6GohZ7X2Lzoj0X9OB2eaA-lO26dffEUxk';
+    // Get values from environment variables instead of hardcoding
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     console.log('[getClientSupabase] Before createClient call. URL:', supabaseUrl ? 'Set' : 'Not Set', 'Key:', supabaseAnonKey ? 'Set' : 'Not Set');
-    console.log('[getClientSupabase] Key Length:', supabaseAnonKey?.length);
-
-    // Check if values are actually strings and non-empty
-    if (typeof supabaseUrl !== 'string' || supabaseUrl.trim() === '' || typeof supabaseAnonKey !== 'string' || supabaseAnonKey.trim() === '') {
-      throw new Error(`Invalid Supabase config: URL type ${typeof supabaseUrl}, Key type ${typeof supabaseAnonKey}`);
+    
+    if (supabaseAnonKey) {
+      console.log('[getClientSupabase] Key Length:', supabaseAnonKey.length);
     }
 
-    // Create the client instance with direct hardcoded values 
+    // Check if values are actually strings and non-empty
+    if (!supabaseUrl || !supabaseAnonKey || typeof supabaseUrl !== 'string' || typeof supabaseAnonKey !== 'string') {
+      throw new Error(`Invalid Supabase config: URL or Key missing or invalid`);
+    }
+
+    // Try to extract the domain for proper cookie config
+    const projectRef = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1];
+    console.log('[getClientSupabase] Detected project ref:', projectRef || 'unknown');
+    
+    // Create the client instance with improved cookie handling
     _browserSupabaseClient = createClient<Database>(
       supabaseUrl,
       supabaseAnonKey,
@@ -473,17 +479,253 @@ export const getClientSupabase = () => {
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
-          storage: customStorage // Reuse the existing storage adapter
-        }
+          storage: {
+            // Store in both localStorage and cookies
+            getItem: (key) => {
+              try {
+                // Try to get from localStorage first
+                const storedValue = localStorage.getItem(key);
+                console.log(`[Storage] Getting key ${key}: ${storedValue ? 'found' : 'not found'}`);
+                
+                // Also try to manually read a cookie with the same name
+                try {
+                  const cookieName = key.replace('sb-', 'sb-gwvhbimnktyovdmdcdnm-');
+                  const match = document.cookie.match(new RegExp('(^| )' + cookieName + '=([^;]+)'));
+                  if (match) console.log(`[Storage] Found cookie ${cookieName} with length ${match[2].length}`);
+                } catch (e) {
+                  // Ignore cookie errors
+                }
+                
+                return storedValue;
+              } catch (error) {
+                console.error(`[Storage] Error getting ${key}:`, error);
+                return null;
+              }
+            },
+            setItem: (key, value) => {
+              try {
+                // Store in localStorage
+                localStorage.setItem(key, value);
+                console.log(`[Storage] Set key ${key} (length: ${value.length})`);
+                
+                // Also store in cookies directly
+                try {
+                  // Parse the data to get session info
+                  let session = null;
+                  try {
+                    session = JSON.parse(value);
+                    console.log(`[Storage] Session info - expires_at:`, session?.expires_at || 'unknown');
+                    
+                    // If this is auth-token, set it as a cookie too
+                    if (key === 'sb-gwvhbimnktyovdmdcdnm-auth-token' && session) {
+                      // Set the cookies that middleware expects
+                      setCookie('sb-gwvhbimnktyovdmdcdnm-auth-token', value, {
+                        path: '/',
+                        maxAge: 60 * 60 * 24 * 7, // 1 week
+                        domain: window.location.hostname,
+                        sameSite: 'lax'
+                      });
+                      
+                      // Also set the access token and refresh token separately
+                      if (session.access_token) {
+                        setCookie('sb-access-token', session.access_token, {
+                          path: '/',
+                          maxAge: 60 * 60 * 24 * 7, 
+                          domain: window.location.hostname,
+                          sameSite: 'lax'
+                        });
+                      }
+                      
+                      if (session.refresh_token) {
+                        setCookie('sb-refresh-token', session.refresh_token, {
+                          path: '/',
+                          maxAge: 60 * 60 * 24 * 7, 
+                          domain: window.location.hostname,
+                          sameSite: 'lax'
+                        });
+                      }
+                      
+                      console.log(`[Storage] Set cookies for auth`);
+                    }
+                  } catch (e) {
+                    // Not a JSON value, that's fine
+                  }
+                } catch (e) {
+                  console.error(`[Storage] Error setting cookies:`, e);
+                }
+              } catch (error) {
+                console.error(`[Storage] Error setting ${key}:`, error);
+              }
+            },
+            removeItem: (key) => {
+              try {
+                localStorage.removeItem(key);
+                console.log(`[Storage] Removed key ${key}`);
+                
+                // Also remove cookies
+                try {
+                  // List all possible cookie names to clear
+                  const cookiesToClear = [
+                    // Project-specific auth token
+                    key.replace('sb-', 'sb-gwvhbimnktyovdmdcdnm-'),
+                    // Generic auth cookies
+                    'sb-access-token',
+                    'sb-refresh-token',
+                    'supabase-auth-token',
+                    'sb-auth-token',
+                    'sb-provider-token',
+                    'sb-provider-refresh-token',
+                    // Specific auth token 
+                    'sb-gwvhbimnktyovdmdcdnm-auth-token',
+                    // Indexed variants
+                    'sb-gwvhbimnktyovdmdcdnm-auth-token.0',
+                    'sb-gwvhbimnktyovdmdcdnm-auth-token.1',
+                    'sb-gwvhbimnktyovdmdcdnm-auth-token.2',
+                    'sb-gwvhbimnktyovdmdcdnm-auth-token.3',
+                    'sb-gwvhbimnktyovdmdcdnm-auth-token.4'
+                  ];
+                  
+                  // Clear all possible domains to ensure cookies are properly removed
+                  const domains = [
+                    window.location.hostname,
+                    window.location.hostname.split('.').slice(1).join('.'), // Remove subdomain
+                    '' // No domain = current domain
+                  ];
+                  
+                  for (const cookieName of cookiesToClear) {
+                    for (const domain of domains) {
+                      const cookieString = `${cookieName}=; Max-Age=0; path=/; ${domain ? `domain=${domain};` : ''} SameSite=Lax`;
+                      document.cookie = cookieString;
+                    }
+                  }
+                  console.log(`[Storage] Removed all auth cookies for key ${key}`);
+                } catch (e) {
+                  console.error(`[Storage] Error removing cookies:`, e);
+                }
+              } catch (error) {
+                console.error(`[Storage] Error removing ${key}:`, error);
+              }
+            }
+          },
+          // Set the auth method to use cookies
+          flowType: 'pkce',
+          // Set a debug flag to get more information
+          debug: process.env.NODE_ENV === 'development'
+        },
       }
     );
+
+    // Set up an auth state change listener to handle sign out
+    _browserSupabaseClient.auth.onAuthStateChange((event, session) => {
+      console.log(`[Auth] Auth state changed: ${event}`);
+      
+      if (event === 'SIGNED_OUT') {
+        console.log('[Auth] Session signed out, clearing all auth storage');
+        try {
+          // Clear localStorage of all Supabase-related items
+          const keysToRemove = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (
+              key.startsWith('sb-') || 
+              key.includes('supabase') || 
+              key.includes('auth')
+            )) {
+              keysToRemove.push(key);
+            }
+          }
+          
+          // Remove all matched keys
+          for (const key of keysToRemove) {
+            localStorage.removeItem(key);
+            console.log(`[Auth] Removed localStorage key: ${key}`);
+          }
+          
+          // Also clear cookies manually to ensure complete cleanup
+          clearAllAuthCookies();
+        } catch (e) {
+          console.error('[Auth] Error during storage cleanup:', e);
+        }
+      }
+    });
+    
+    // Helper function to set cookies
+    function setCookie(name: string, value: string, options: { [key: string]: any } = {}) {
+      let cookieString = `${name}=${value}`;
+      
+      for (const optionKey in options) {
+        cookieString += `; ${optionKey}`;
+        const optionValue = options[optionKey];
+        if (optionValue !== true) {
+          cookieString += `=${optionValue}`;
+        }
+      }
+      
+      document.cookie = cookieString;
+    }
+    
+    // Helper function to clear all auth-related cookies
+    function clearAllAuthCookies() {
+      // List all possible cookie names to clear
+      const cookiesToClear = [
+        'sb-access-token',
+        'sb-refresh-token',
+        'supabase-auth-token',
+        'sb-auth-token',
+        'sb-provider-token',
+        'sb-provider-refresh-token',
+        'sb-gwvhbimnktyovdmdcdnm-auth-token',
+        'sb-gwvhbimnktyovdmdcdnm-auth-token.0',
+        'sb-gwvhbimnktyovdmdcdnm-auth-token.1',
+        'sb-gwvhbimnktyovdmdcdnm-auth-token.2',
+        'sb-gwvhbimnktyovdmdcdnm-auth-token.3',
+        'sb-gwvhbimnktyovdmdcdnm-auth-token.4'
+      ];
+      
+      // Clear on all possible domains
+      const domains = [
+        window.location.hostname,
+        window.location.hostname.split('.').slice(1).join('.'), // Remove subdomain
+        '' // No domain = current domain
+      ];
+      
+      for (const cookieName of cookiesToClear) {
+        for (const domain of domains) {
+          document.cookie = `${cookieName}=; Max-Age=0; path=/; ${domain ? `domain=${domain};` : ''} SameSite=Lax`;
+        }
+      }
+      
+      console.log('[Auth] Cleared all auth cookies');
+    }
 
     console.log('[getClientSupabase] Supabase client initialization attempted.');
     if (!_browserSupabaseClient) {
        console.error('[getClientSupabase] createClient returned null or undefined!');
     } else {
        console.log('[getClientSupabase] Supabase client initialized successfully');
+       
+       // Test the client if it was successfully created
+       _browserSupabaseClient.auth.getSession().then(({ data, error }) => {
+         if (error) {
+           console.error('[getClientSupabase] Session test error:', error);
+         } else {
+           console.log('[getClientSupabase] Session test success:', data.session ? 'Session exists' : 'No session');
+           if (data.session) {
+             console.log('[getClientSupabase] User ID:', data.session.user.id);
+             
+             // Force cookies to be properly set
+             _browserSupabaseClient?.auth.getSession().then(({ error }) => {
+               if (error) {
+                 console.error('[getClientSupabase] Error refreshing cookies:', error);
+               } else {
+                 console.log('[getClientSupabase] Cookies refreshed');
+               }
+             });
+           }
+         }
+       });
     }
+    
     return _browserSupabaseClient;
   } catch (error) {
     console.error('[getClientSupabase] Error during initialization:', error);

@@ -151,11 +151,80 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
     
     try {
+      // First try the standard signOut method
       await supabase.auth.signOut();
+      
+      // Manual cleanup to ensure everything is cleared
+      try {
+        // Clear localStorage of all Supabase-related items
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (
+            key.startsWith('sb-') || 
+            key.includes('supabase') || 
+            key.includes('auth')
+          )) {
+            keysToRemove.push(key);
+          }
+        }
+        
+        // Remove all matched keys
+        for (const key of keysToRemove) {
+          localStorage.removeItem(key);
+          console.log(`[Auth] Manually removed localStorage key during signOut: ${key}`);
+        }
+        
+        // Clear all cookies manually
+        clearAllAuthCookies();
+        
+        // Force state update to make sure the UI updates
+        setUser(null);
+        setSession(null);
+        
+        // Redirect to home page after logout
+        router.push('/');
+        router.refresh(); // Force a full refresh to clear navigation state
+      } catch (cleanupError) {
+        console.error('Error during manual cleanup:', cleanupError);
+      }
     } catch (error) {
       console.error('Error signing out:', error);
       setError(error instanceof Error ? error : new Error('Unknown error during sign out'));
     }
+  };
+  
+  // Helper function to clear all auth cookies
+  const clearAllAuthCookies = () => {
+    const cookiesToClear = [
+      'sb-access-token',
+      'sb-refresh-token',
+      'supabase-auth-token',
+      'sb-auth-token',
+      'sb-provider-token',
+      'sb-provider-refresh-token',
+      'sb-gwvhbimnktyovdmdcdnm-auth-token',
+      'sb-gwvhbimnktyovdmdcdnm-auth-token.0',
+      'sb-gwvhbimnktyovdmdcdnm-auth-token.1',
+      'sb-gwvhbimnktyovdmdcdnm-auth-token.2',
+      'sb-gwvhbimnktyovdmdcdnm-auth-token.3',
+      'sb-gwvhbimnktyovdmdcdnm-auth-token.4'
+    ];
+    
+    // Clear on multiple domains to be thorough
+    const domains = [
+      window.location.hostname,
+      window.location.hostname.split('.').slice(1).join('.'), // Remove subdomain
+      '' // No domain = current domain
+    ];
+    
+    for (const cookieName of cookiesToClear) {
+      for (const domain of domains) {
+        document.cookie = `${cookieName}=; Max-Age=0; path=/; ${domain ? `domain=${domain};` : ''} SameSite=Lax`;
+      }
+    }
+    
+    console.log('[Auth] Manually cleared all auth cookies during signOut');
   };
 
   // Reset password function

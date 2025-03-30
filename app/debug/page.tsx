@@ -1,141 +1,499 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { env, checkRequiredEnvVars } from '@/app/lib/env';
+import { useState, useEffect } from 'react';
 import { getClientSupabase } from '@/app/lib/supabase';
-import { createClient } from '@supabase/supabase-js';
+import { Heading } from '@/app/components/heading';
+import { Button } from '@/app/components/button';
+import Link from 'next/link';
 
 export default function DebugPage() {
-  const [clientState, setClientState] = useState({
-    hydrated: false,
-    supabaseInitialized: false,
-    envVarsPresent: false,
-    directConnectionWorking: false,
-    error: null as string | null,
+  const [envVars, setEnvVars] = useState({
+    NODE_ENV: '',
+    SUPABASE_URL: '',
+    SUPABASE_ANON_KEY: '',
+    APP_URL: '',
   });
-
-  // Check client-side hydration
+  
+  const [session, setSession] = useState<any>(null);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [cookies, setCookies] = useState<{name: string, exists: boolean, length?: number}[]>([]);
+  const [localStorageTokens, setLocalStorageTokens] = useState<{key: string, exists: boolean, length?: number}[]>([]);
+  const [logoutStatus, setLogoutStatus] = useState<string | null>(null);
+  
   useEffect(() => {
-    try {
-      // Check environment variables
-      const envVarsOk = checkRequiredEnvVars();
+    // Get environment variables
+    setEnvVars({
+      NODE_ENV: process.env.NODE_ENV || '',
+      SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅' : '❌',
+      SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅' : '❌',
+      APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+    });
+    
+    // Check cookies
+    const checkCookies = () => {
+      const cookieList = [];
+      const allCookies = document.cookie.split(';');
       
-      // Try to initialize Supabase
-      const supabase = getClientSupabase();
-
-      // Test the direct connection
-      const testDirectConnection = async () => {
-        try {
-          // Use hardcoded values for direct test
-          const directClient = createClient(
-            'https://gwvhbimnktyovdmdcdnm.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3dmhiaW1ua3R5b3ZkbWRjZG5tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI2MTA0OTcsImV4cCI6MjA1ODE4NjQ5N30.AMUH2C4ESS6GohZ7X2Lzoj0X9OB2eaA-lO26dffEUxk'
-          );
-          
-          const { error } = await directClient.from('profiles').select('id').limit(1);
-          if (!error) {
-            return true;
-          }
-          return false;
-        } catch (err) {
-          console.error('Direct connection test failed:', err);
-          return false;
+      // Check for specific auth cookies
+      const authCookies = [
+        'sb-access-token', 
+        'sb-refresh-token', 
+        'supabase-auth-token',
+        'sb-auth-token',
+        'sb-provider-token',
+        'sb-provider-refresh-token',
+        'sb-gwvhbimnktyovdmdcdnm-auth-token'
+      ];
+      
+      for (const cookieName of authCookies) {
+        const cookie = allCookies.find(c => c.trim().startsWith(`${cookieName}=`));
+        if (cookie) {
+          const value = cookie.split('=')[1];
+          cookieList.push({
+            name: cookieName,
+            exists: true,
+            length: value ? value.length : 0
+          });
+        } else {
+          cookieList.push({
+            name: cookieName,
+            exists: false
+          });
         }
-      };
+      }
       
-      // Run the connection test
-      testDirectConnection().then(directWorking => {
-        setClientState({
-          hydrated: true,
-          supabaseInitialized: !!supabase,
-          envVarsPresent: envVarsOk,
-          directConnectionWorking: directWorking,
-          error: null,
+      setCookies(cookieList);
+    };
+    
+    // Check localStorage
+    const checkLocalStorage = () => {
+      try {
+        const tokenKeys = [
+          'sb-gwvhbimnktyovdmdcdnm-auth-token',
+          'supabase.auth.token',
+          'sb-access-token',
+          'sb-refresh-token'
+        ];
+        
+        const tokens = tokenKeys.map(key => {
+          const value = localStorage.getItem(key);
+          return {
+            key,
+            exists: !!value,
+            length: value ? value.length : 0
+          };
         });
-      });
-    } catch (err) {
-      console.error('Debug page error:', err);
-      setClientState({
-        hydrated: true,
-        supabaseInitialized: false,
-        envVarsPresent: false,
-        directConnectionWorking: false,
-        error: err instanceof Error ? err.message : 'Unknown error',
-      });
-    }
+        
+        setLocalStorageTokens(tokens);
+      } catch (e) {
+        console.error('Error checking localStorage:', e);
+      }
+    };
+    
+    // Check Supabase session
+    const checkSession = async () => {
+      setIsLoading(true);
+      try {
+        const supabase = getClientSupabase();
+        if (!supabase) {
+          setSessionError('Failed to initialize Supabase client');
+          return;
+        }
+        
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          setSessionError(error.message);
+          return;
+        }
+        
+        setSession(data.session);
+        console.log('Debug page session:', data.session);
+        
+        // Also check cookies and localStorage
+        checkCookies();
+        checkLocalStorage();
+      } catch (err: any) {
+        setSessionError(err.message || 'Unknown error checking session');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    checkSession();
+    
+    // Set up an interval to refresh the session info
+    const refreshInterval = setInterval(() => {
+      checkSession();
+    }, 5000);
+    
+    return () => clearInterval(refreshInterval);
   }, []);
-
-  return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-2xl font-bold mb-6">Environment Debug Page</h1>
+  
+  const handleForceLogout = async () => {
+    const supabase = getClientSupabase();
+    if (!supabase) {
+      setSessionError('Failed to initialize Supabase client');
+      return;
+    }
+    
+    try {
+      // Clear localStorage and cookies first for a clean logout
+      setLogoutStatus('clearing-storage');
       
-      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Client State</h2>
-        <div className="space-y-3">
-          <div className="flex justify-between">
-            <span className="font-medium">Client Hydrated:</span>
-            <span className={clientState.hydrated ? "text-green-600" : "text-red-600"}>
-              {clientState.hydrated ? '✅ Yes' : '❌ No'}
-            </span>
-          </div>
-          
-          <div className="flex justify-between">
-            <span className="font-medium">Environment Variables:</span>
-            <span className={clientState.envVarsPresent ? "text-green-600" : "text-red-600"}>
-              {clientState.envVarsPresent ? '✅ Available' : '❌ Missing'}
-            </span>
-          </div>
-          
-          <div className="flex justify-between">
-            <span className="font-medium">Supabase Client:</span>
-            <span className={clientState.supabaseInitialized ? "text-green-600" : "text-red-600"}>
-              {clientState.supabaseInitialized ? '✅ Initialized' : '❌ Failed'}
-            </span>
-          </div>
-          
-          <div className="flex justify-between">
-            <span className="font-medium">Direct Connection:</span>
-            <span className={clientState.directConnectionWorking ? "text-green-600" : "text-red-600"}>
-              {clientState.directConnectionWorking ? '✅ Working' : '❌ Failed'}
-            </span>
-          </div>
-          
-          {clientState.error && (
-            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900 rounded text-red-700 dark:text-red-300">
-              <strong>Error:</strong> {clientState.error}
+      // Clear all auth-related cookies
+      clearAuthCookies();
+      
+      // Clear localStorage of all Supabase-related items
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (
+          key.startsWith('sb-') || 
+          key.includes('supabase') || 
+          key.includes('auth')
+        )) {
+          keysToRemove.push(key);
+        }
+      }
+      
+      // Remove all matched keys
+      for (const key of keysToRemove) {
+        localStorage.removeItem(key);
+      }
+      
+      // Now call the actual signOut method
+      setLogoutStatus('signing-out');
+      await supabase.auth.signOut();
+      
+      // Update UI
+      setSession(null);
+      
+      // Navigate home after successful logout with logging_out flag
+      // to prevent middleware redirection issues
+      setLogoutStatus('redirecting');
+      setTimeout(() => {
+        window.location.href = '/?logging_out=true';
+      }, 1000);
+    } catch (err: any) {
+      setSessionError(err.message || 'Error signing out');
+      setLogoutStatus(null);
+    }
+  };
+  
+  const handleRedirectTest = () => {
+    window.location.href = '/auth/login?redirect=%2Fgame';
+  };
+  
+  const handleTestDirectNavigation = () => {
+    window.location.href = '/game';
+  };
+  
+  const handleForceRefreshSession = async () => {
+    const supabase = getClientSupabase();
+    if (!supabase) {
+      setSessionError('Failed to initialize Supabase client');
+      return;
+    }
+    
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.error('Session refresh error:', error);
+        setSessionError('Failed to refresh session: ' + error.message);
+      } else {
+        console.log('Session refreshed:', !!data.session);
+        setSession(data.session);
+        
+        // Try to set cookies manually too
+        if (data.session) {
+          setSessionAsCookies(data.session);
+        }
+      }
+    } catch (err: any) {
+      setSessionError(err.message || 'Error refreshing session');
+    }
+  };
+  
+  const handleSyncCookies = () => {
+    window.location.href = '/auth/sync-cookies?redirect=/debug';
+  };
+  
+  const handleCopyCookiesToLocalStorage = () => {
+    try {
+      if (!session) {
+        setSessionError('No session available to copy');
+        return;
+      }
+      
+      // Store session in localStorage under various names
+      const sessionStr = JSON.stringify(session);
+      localStorage.setItem('sb-gwvhbimnktyovdmdcdnm-auth-token', sessionStr);
+      console.log('Copied session to localStorage');
+      
+      window.location.reload();
+    } catch (e) {
+      console.error('Error copying to localStorage:', e);
+      setSessionError('Error copying to localStorage: ' + String(e));
+    }
+  };
+  
+  const handleCopyLocalStorageToCookies = () => {
+    try {
+      const tokenStr = localStorage.getItem('sb-gwvhbimnktyovdmdcdnm-auth-token');
+      if (!tokenStr) {
+        setSessionError('No token found in localStorage');
+        return;
+      }
+      
+      const session = JSON.parse(tokenStr);
+      setSessionAsCookies(session);
+      console.log('Copied localStorage token to cookies');
+      
+      window.location.reload();
+    } catch (e) {
+      console.error('Error copying to cookies:', e);
+      setSessionError('Error copying to cookies: ' + String(e));
+    }
+  };
+  
+  // Helper to set cookies
+  function setSessionAsCookies(session: any) {
+    try {
+      // Set the full session as cookie
+      const sessionStr = JSON.stringify(session);
+      setCookie('sb-gwvhbimnktyovdmdcdnm-auth-token', sessionStr, {
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7, // 1 week
+        sameSite: 'lax'
+      });
+      
+      // Set individual token cookies that middleware might check
+      if (session.access_token) {
+        setCookie('sb-access-token', session.access_token, {
+          path: '/',
+          maxAge: 60 * 60 * 24 * 7,
+          sameSite: 'lax'
+        });
+      }
+      
+      if (session.refresh_token) {
+        setCookie('sb-refresh-token', session.refresh_token, {
+          path: '/',
+          maxAge: 60 * 60 * 24 * 7,
+          sameSite: 'lax'
+        });
+      }
+      
+      console.log('Set session as cookies');
+    } catch (e) {
+      console.error('Error setting cookies:', e);
+      setSessionError('Error setting cookies: ' + String(e));
+    }
+  }
+  
+  // Helper to clear cookies
+  function clearAuthCookies() {
+    const authCookies = [
+      'sb-access-token', 
+      'sb-refresh-token', 
+      'supabase-auth-token',
+      'sb-auth-token',
+      'sb-provider-token',
+      'sb-provider-refresh-token',
+      'sb-gwvhbimnktyovdmdcdnm-auth-token'
+    ];
+    
+    for (const name of authCookies) {
+      document.cookie = `${name}=; Max-Age=0; path=/;`;
+    }
+    
+    console.log('Cleared auth cookies');
+  }
+  
+  // Helper to set cookies
+  function setCookie(name: string, value: string, options: { [key: string]: any } = {}) {
+    let cookieString = `${name}=${value}`;
+    
+    for (const optionKey in options) {
+      cookieString += `; ${optionKey}`;
+      const optionValue = options[optionKey];
+      if (optionValue !== true) {
+        cookieString += `=${optionValue}`;
+      }
+    }
+    
+    document.cookie = cookieString;
+    console.log(`Set cookie: ${name} (length: ${value.length})`);
+  }
+  
+  return (
+    <div className="container mx-auto p-6">
+      <Heading level={1} className="mb-6">Debug Information</Heading>
+      
+      <div className="mb-8">
+        <Heading level={2} className="text-xl mb-4">Environment Variables</Heading>
+        <div className="bg-white rounded-lg shadow-md p-4 mb-6 dark:bg-gray-800">
+          <table className="w-full">
+            <tbody>
+              {Object.entries(envVars).map(([key, value]) => (
+                <tr key={key} className="border-b dark:border-gray-700">
+                  <td className="py-2 px-4 font-bold">{key}:</td>
+                  <td className="py-2 px-4">
+                    {key.includes('KEY') && typeof value === 'string' && !['✅', '❌'].includes(value) 
+                      ? value.substring(0, 10) + '...' 
+                      : value}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <div className="mb-8">
+        <Heading level={2} className="text-xl mb-4">Authentication Cookies</Heading>
+        <div className="bg-white rounded-lg shadow-md p-4 mb-6 dark:bg-gray-800">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b dark:border-gray-700">
+                <th className="py-2 px-4 text-left">Cookie Name</th>
+                <th className="py-2 px-4 text-left">Status</th>
+                <th className="py-2 px-4 text-left">Length</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cookies.map((cookie, index) => (
+                <tr key={index} className="border-b dark:border-gray-700">
+                  <td className="py-2 px-4 font-mono text-sm">{cookie.name}</td>
+                  <td className="py-2 px-4">
+                    {cookie.exists ? 
+                      <span className="text-green-600 font-bold">✓ Present</span> : 
+                      <span className="text-red-600 font-bold">✗ Missing</span>}
+                  </td>
+                  <td className="py-2 px-4">{cookie.exists ? cookie.length : '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <div className="mb-8">
+        <Heading level={2} className="text-xl mb-4">LocalStorage Tokens</Heading>
+        <div className="bg-white rounded-lg shadow-md p-4 mb-6 dark:bg-gray-800">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b dark:border-gray-700">
+                <th className="py-2 px-4 text-left">Key</th>
+                <th className="py-2 px-4 text-left">Status</th>
+                <th className="py-2 px-4 text-left">Length</th>
+              </tr>
+            </thead>
+            <tbody>
+              {localStorageTokens.map((token, index) => (
+                <tr key={index} className="border-b dark:border-gray-700">
+                  <td className="py-2 px-4 font-mono text-sm">{token.key}</td>
+                  <td className="py-2 px-4">
+                    {token.exists ? 
+                      <span className="text-green-600 font-bold">✓ Present</span> : 
+                      <span className="text-red-600 font-bold">✗ Missing</span>}
+                  </td>
+                  <td className="py-2 px-4">{token.exists ? token.length : '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <div className="mb-8">
+        <Heading level={2} className="text-xl mb-4">Authentication Status</Heading>
+        <div className="bg-white rounded-lg shadow-md p-4 dark:bg-gray-800">
+          {isLoading ? (
+            <p>Loading session information...</p>
+          ) : sessionError ? (
+            <p className="text-red-600">{sessionError}</p>
+          ) : session ? (
+            <div>
+              <p className="mb-2 font-bold text-green-600">✓ Authenticated</p>
+              <p className="mb-2"><strong>User ID:</strong> {session.user?.id}</p>
+              <p className="mb-2"><strong>Email:</strong> {session.user?.email}</p>
+              <p className="mb-2"><strong>Token expires:</strong> {session.expires_at ? new Date(session.expires_at * 1000).toLocaleString() : 'unknown'}</p>
+              <p className="mb-2"><strong>Created at:</strong> {session.created_at ? new Date(session.created_at * 1000).toLocaleString() : 'unknown'}</p>
+              <details className="mt-4">
+                <summary className="cursor-pointer text-blue-600 hover:text-blue-800">Show Raw Session Data</summary>
+                <pre className="mt-2 bg-gray-100 p-4 rounded overflow-auto max-h-60 text-xs dark:bg-gray-900">
+                  {JSON.stringify(session, null, 2)}
+                </pre>
+              </details>
             </div>
+          ) : (
+            <p className="font-bold text-red-600">✗ Not authenticated</p>
           )}
         </div>
       </div>
       
-      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Environment Values</h2>
-        <pre className="bg-gray-100 dark:bg-gray-900 p-4 rounded overflow-auto text-sm">
-          {JSON.stringify({
-            SUPABASE_URL: env.SUPABASE_URL ? `${env.SUPABASE_URL.substring(0, 15)}...` : 'Not set',
-            SUPABASE_ANON_KEY: env.SUPABASE_ANON_KEY ? `${env.SUPABASE_ANON_KEY.substring(0, 15)}...` : 'Not set',
-            APP_URL: env.APP_URL,
-            NODE_ENV: process.env.NODE_ENV,
-          }, null, 2)}
-        </pre>
-      </div>
-      
-      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Actions</h2>
-        <div className="space-y-4">
-          <a href="/debug/supabase" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">
-            Direct Supabase Test
-          </a>
+      <div className="mb-8">
+        <Heading level={2} className="text-xl mb-4">Test Actions</Heading>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Button color="blue" onClick={handleForceLogout} disabled={logoutStatus !== null}>
+            {logoutStatus === 'clearing-storage' ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Clearing Storage...
+              </>
+            ) : logoutStatus === 'signing-out' ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Signing Out...
+              </>
+            ) : logoutStatus === 'redirecting' ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Redirecting...
+              </>
+            ) : (
+              'Force Logout'
+            )}
+          </Button>
+          <Button color="purple" onClick={handleRedirectTest}>
+            Test Login Redirect
+          </Button>
+          <Button color="green" onClick={handleTestDirectNavigation}>
+            Test Direct Navigation to Protected Page
+          </Button>
+          <Button color="orange" onClick={handleForceRefreshSession}>
+            Force Refresh Session
+          </Button>
+          <Button color="yellow" onClick={handleSyncCookies}>
+            Force Sync Cookies
+          </Button>
+          <Button color="cyan" onClick={handleCopyCookiesToLocalStorage}>
+            Copy Session → LocalStorage
+          </Button>
+          <Button color="indigo" onClick={handleCopyLocalStorageToCookies}>
+            Copy LocalStorage → Cookies
+          </Button>
+          <Button color="red" onClick={() => window.location.reload()}>
+            Reload Page
+          </Button>
         </div>
       </div>
       
-      <div className="flex justify-center mt-8">
-        <a 
-          href="/"
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded"
-        >
-          Back to Home
-        </a>
+      <div className="mt-12">
+        <Link href="/">
+          <Button outline>Back to Home</Button>
+        </Link>
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ import {
   DropdownItem as DropdownItem,
   DropdownDivider as DropdownSeparator
 } from '../../components/dropdown';
+import { useState } from 'react';
 
 export default function AuthNav() {
   console.log('[AuthNav] Rendering or executing...');
@@ -30,11 +31,28 @@ export default function AuthNav() {
   };
 
   const handleSignOut = async () => {
-    await signOut();
-    // Redirect to home after sign out
-    // Consider using router.push('/') if using Next navigation hooks
-    window.location.href = '/'; 
+    try {
+      // Update UI to indicate signing out
+      setIsSigningOut(true);
+      
+      // Call the sign out function from the auth hook
+      await signOut();
+      
+      // The auth hook should already handle redirects, but as a fallback:
+      setTimeout(() => {
+        if (window.location.pathname !== '/') {
+          window.location.href = '/';
+        }
+      }, 500);
+    } catch (error) {
+      console.error('Error during sign out:', error);
+      // Show error notification if needed
+      setIsSigningOut(false);
+    }
   };
+
+  // Add state for signing out status
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   return (
     <div className="bg-white/60 backdrop-blur-md border-b border-gradient-to-r shadow-sm sticky top-0 z-50">
@@ -78,13 +96,21 @@ export default function AuthNav() {
                   <DropdownSeparator />
                   <DropdownItem 
                     onClick={handleSignOut}
+                    disabled={isSigningOut}
                   >
                     <div data-slot="icon" className="fill-purple-500">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="size-5">
-                        <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
-                      </svg>
+                      {isSigningOut ? (
+                        <svg className="animate-spin size-5 text-purple-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="size-5">
+                          <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
+                        </svg>
+                      )}
                     </div>
-                    <span className="font-medium">Sign Out</span>
+                    <span className="font-medium">{isSigningOut ? "Signing Out..." : "Sign Out"}</span>
                   </DropdownItem>
                 </DropdownItems>
               </Dropdown>

@@ -97,12 +97,38 @@ function LoginPageContent() {
         return;
       }
       
-      console.log('Login successful, redirecting to', redirectTo);
+      // Log session details for debugging
+      console.log('Login successful! Session info:', {
+        userId: sessionCheck.session.user.id,
+        expiresAt: sessionCheck.session.expires_at ? new Date(sessionCheck.session.expires_at * 1000).toISOString() : 'unknown',
+        providerToken: !!sessionCheck.session.provider_token,
+        providerRefreshToken: !!sessionCheck.session.provider_refresh_token,
+      });
       
-      // Successful login, redirect after a short delay to ensure session is stored
-      setTimeout(() => {
-        router.push(redirectTo);
-      }, 500);
+      // Get the decoded redirect URL
+      let decodedRedirect = '/';
+      try {
+        if (redirectTo && redirectTo !== '/') {
+          // Handle both the raw URL and an encoded URL
+          decodedRedirect = redirectTo.startsWith('%2F') ? 
+            decodeURIComponent(redirectTo) : 
+            redirectTo;
+        }
+      } catch (e) {
+        console.error('Error decoding redirect URL:', e);
+        decodedRedirect = '/';
+      }
+      
+      console.log('Login successful, redirecting through cookie sync page to:', decodedRedirect);
+      
+      // Redirect through the cookie sync page to ensure cookies are set correctly
+      const syncUrl = new URL('/auth/sync-cookies', window.location.origin);
+      syncUrl.searchParams.set('redirect', decodedRedirect);
+      
+      // Use direct navigation with the syncUrl
+      if (typeof window !== 'undefined') {
+        window.location.href = syncUrl.toString();
+      }
       
     } catch (error) {
       console.error('Unexpected login error:', error);
