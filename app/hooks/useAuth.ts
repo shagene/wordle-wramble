@@ -4,7 +4,7 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 import { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import { getClientSupabase } from '../lib/supabase';
 import { useRouter } from 'next/navigation';
-import { env, checkRequiredEnvVars } from '../lib/env';
+import { env } from '../lib/env';
 
 // Define the auth context type
 type AuthContextType = {

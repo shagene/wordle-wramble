@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { supabaseAdmin } from '@/app/lib/supabase';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 // Cache for rate limiting
 const setupAttempts = new Map<string, { count: number; timestamp: number }>();
@@ -64,17 +65,36 @@ function checkRateLimit(ip: string): boolean {
  * Log setup attempt
  */
 async function logSetupAttempt(ip: string, success: boolean, error?: string) {
+  // Use a temporary server client for logging
+  // Note: This uses the ANON key. If RLS prevents logging,
+  // a dedicated service role client might be needed here.
+  const cookieStore = await cookies(); // Await the cookies
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+      },
+    }
+  );
+
   try {
-    await supabaseAdmin
+    const { error: logError } = await supabase
       .from('setup_logs')
       .insert({
         ip_address: ip,
         success,
         error_message: error,
-        created_at: new Date().toISOString()
       });
-  } catch (error) {
-    console.error('Failed to log setup attempt:', error);
+      
+    if (logError) {
+      console.error('Failed to log setup attempt (Supabase Error):', logError);
+    }
+  } catch (catchError) {
+    console.error('Failed to log setup attempt (Catch Error):', catchError);
   }
 }
 

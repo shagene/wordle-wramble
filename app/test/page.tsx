@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import Link from 'next/link';
 
 export default function SuperBasicTest() {
   const [status, setStatus] = useState('Loading...');
@@ -76,9 +77,9 @@ export default function SuperBasicTest() {
         </p>
       </div>
       <div className="mt-8">
-        <a href="/" className="text-blue-600 hover:underline">
+        <Link href="/" className="text-blue-600 hover:underline">
           Return to Home
-        </a>
+        </Link>
       </div>
     </div>
   );

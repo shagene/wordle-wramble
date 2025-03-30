@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin } from './supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 // Define bucket names
 export const STORAGE_BUCKETS = {
@@ -9,8 +9,12 @@ export const STORAGE_BUCKETS = {
 /**
  * Initialize storage buckets if they don't exist
  * This should be called during app initialization or from an admin function
+ * !!! COMMENTED OUT FOR NOW - Requires a proper admin client setup !!!
  */
+/*
 export const initializeStorageBuckets = async () => {
+  // This requires a Supabase client initialized with SERVICE_ROLE_KEY
+  // const supabaseAdmin = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   try {
     // Check and create audio-cache bucket
     const { data: audioBuckets } = await supabaseAdmin.storage.getBucket(STORAGE_BUCKETS.AUDIO_CACHE);
@@ -20,12 +24,9 @@ export const initializeStorageBuckets = async () => {
         fileSizeLimit: 10485760, // 10MB max file size
         allowedMimeTypes: ['audio/mpeg', 'audio/mp3']
       });
-      
-      // CORS configuration would be set in the Supabase Dashboard
-      // or via the Admin API - this can't be done directly in the JS client
     }
     
-    // Check and create user-uploads bucket (for educator verification, etc.)
+    // Check and create user-uploads bucket
     const { data: uploadBuckets } = await supabaseAdmin.storage.getBucket(STORAGE_BUCKETS.USER_UPLOADS);
     if (!uploadBuckets) {
       await supabaseAdmin.storage.createBucket(STORAGE_BUCKETS.USER_UPLOADS, {
@@ -41,16 +42,20 @@ export const initializeStorageBuckets = async () => {
     return { success: false, error };
   }
 };
+*/
 
 /**
  * Upload a file to a storage bucket
+ * Accepts a Supabase client instance as an argument.
  */
 export const uploadFile = async (
+  supabase: SupabaseClient, // Accept client instance
   bucketName: string,
   filePath: string,
   fileData: File | Blob | ArrayBuffer,
   options?: { contentType?: string; cacheControl?: string }
 ) => {
+  if (!supabase) return { success: false, error: new Error('Supabase client not provided.') };
   try {
     const { error } = await supabase.storage
       .from(bucketName)
@@ -71,16 +76,28 @@ export const uploadFile = async (
 
 /**
  * Get a public URL for a file in a storage bucket
+ * Accepts a Supabase client instance as an argument.
  */
-export const getPublicUrl = (bucketName: string, filePath: string) => {
+export const getPublicUrl = (
+  supabase: SupabaseClient, // Accept client instance
+  bucketName: string, 
+  filePath: string
+) => {
+  if (!supabase) return null; // Or throw error
   const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
   return data.publicUrl;
 };
 
 /**
  * Delete a file from storage
+ * Accepts a Supabase client instance as an argument.
  */
-export const deleteFile = async (bucketName: string, filePath: string) => {
+export const deleteFile = async (
+  supabase: SupabaseClient, // Accept client instance
+  bucketName: string, 
+  filePath: string
+) => {
+  if (!supabase) return { success: false, error: new Error('Supabase client not provided.') };
   try {
     const { error } = await supabase.storage.from(bucketName).remove([filePath]);
     if (error) throw error;
@@ -93,8 +110,15 @@ export const deleteFile = async (bucketName: string, filePath: string) => {
 
 /**
  * Generate a signed URL for temporary access to a private file
+ * Accepts a Supabase client instance as an argument.
  */
-export const getSignedUrl = async (bucketName: string, filePath: string, expiresIn = 60) => {
+export const getSignedUrl = async (
+  supabase: SupabaseClient, // Accept client instance
+  bucketName: string, 
+  filePath: string, 
+  expiresIn = 60
+) => {
+  if (!supabase) return { success: false, error: new Error('Supabase client not provided.') };
   try {
     const { data, error } = await supabase.storage
       .from(bucketName)

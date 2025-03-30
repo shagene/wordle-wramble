@@ -6,6 +6,18 @@ import { Heading } from '@/app/components/heading';
 import { Text } from '@/app/components/text';
 import { Button } from '@/app/components/button';
 
+// Define a type for cookie options
+interface CookieOptions {
+  path?: string;
+  maxAge?: number;
+  domain?: string;
+  secure?: boolean;
+  httpOnly?: boolean;
+  sameSite?: 'strict' | 'lax' | 'none';
+  expires?: Date;
+  [key: string]: string | number | boolean | Date | undefined;
+}
+
 export default function SyncCookiesPage() {
   const [status, setStatus] = useState<'syncing' | 'success' | 'error'>('syncing');
   const [message, setMessage] = useState('Synchronizing authentication cookies...');
@@ -102,14 +114,19 @@ export default function SyncCookiesPage() {
   }, []);
   
   // Helper function to set cookies
-  function setCookie(name: string, value: string, options: { [key: string]: any } = {}) {
+  function setCookie(name: string, value: string, options: CookieOptions = {}) {
     let cookieString = `${name}=${value}`;
     
     for (const optionKey in options) {
       cookieString += `; ${optionKey}`;
       const optionValue = options[optionKey];
       if (optionValue !== true) {
-        cookieString += `=${optionValue}`;
+        // Handle Date object for expires
+        if (optionValue instanceof Date) {
+          cookieString += `=${optionValue.toUTCString()}`;
+        } else {
+          cookieString += `=${optionValue}`;
+        }
       }
     }
     
@@ -178,4 +195,4 @@ export default function SyncCookiesPage() {
       </div>
     </div>
   );
-} 
+}

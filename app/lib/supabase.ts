@@ -435,6 +435,18 @@ export const customStorage = {
 // Create a browser-only singleton client to ensure we only use this on the client side
 let _browserSupabaseClient: ReturnType<typeof createClient<Database>> | null = null;
 
+// Define a type for cookie options
+interface CookieOptions {
+  path?: string;
+  maxAge?: number;
+  domain?: string;
+  secure?: boolean;
+  httpOnly?: boolean;
+  sameSite?: 'strict' | 'lax' | 'none';
+  expires?: Date;
+  [key: string]: string | number | boolean | Date | undefined;
+}
+
 export const getClientSupabase = () => {
   console.log('[getClientSupabase] Function called. typeof window:', typeof window);
   
@@ -492,7 +504,7 @@ export const getClientSupabase = () => {
                   const cookieName = key.replace('sb-', 'sb-gwvhbimnktyovdmdcdnm-');
                   const match = document.cookie.match(new RegExp('(^| )' + cookieName + '=([^;]+)'));
                   if (match) console.log(`[Storage] Found cookie ${cookieName} with length ${match[2].length}`);
-                } catch (e) {
+                } catch (_e) {
                   // Ignore cookie errors
                 }
                 
@@ -547,7 +559,7 @@ export const getClientSupabase = () => {
                       
                       console.log(`[Storage] Set cookies for auth`);
                     }
-                  } catch (e) {
+                  } catch (_e) {
                     // Not a JSON value, that's fine
                   }
                 } catch (e) {
@@ -616,7 +628,7 @@ export const getClientSupabase = () => {
     );
 
     // Set up an auth state change listener to handle sign out
-    _browserSupabaseClient.auth.onAuthStateChange((event, session) => {
+    _browserSupabaseClient.auth.onAuthStateChange((event, _session) => {
       console.log(`[Auth] Auth state changed: ${event}`);
       
       if (event === 'SIGNED_OUT') {
@@ -650,14 +662,19 @@ export const getClientSupabase = () => {
     });
     
     // Helper function to set cookies
-    function setCookie(name: string, value: string, options: { [key: string]: any } = {}) {
+    function setCookie(name: string, value: string, options: CookieOptions = {}) {
       let cookieString = `${name}=${value}`;
       
       for (const optionKey in options) {
         cookieString += `; ${optionKey}`;
         const optionValue = options[optionKey];
         if (optionValue !== true) {
-          cookieString += `=${optionValue}`;
+           // Handle Date object for expires
+           if (optionValue instanceof Date) {
+             cookieString += `=${optionValue.toUTCString()}`;
+           } else {
+             cookieString += `=${optionValue}`;
+           }
         }
       }
       

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getClientSupabase } from '../lib/supabase';
-import { User, Session, AuthError } from '@supabase/supabase-js';
 import { Profile, SubscriptionTier } from '@/app/types';
 import { ensureUserProfile, getUserProfile } from '@/app/services/authService';
 

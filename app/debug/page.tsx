@@ -1,10 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Session } from '@supabase/supabase-js';
 import { getClientSupabase } from '@/app/lib/supabase';
 import { Heading } from '@/app/components/heading';
 import { Button } from '@/app/components/button';
 import Link from 'next/link';
+
+// Define a type for cookie options (same as in sync-cookies)
+interface CookieOptions {
+  path?: string;
+  maxAge?: number;
+  domain?: string;
+  secure?: boolean;
+  httpOnly?: boolean;
+  sameSite?: 'strict' | 'lax' | 'none';
+  expires?: Date;
+  [key: string]: string | number | boolean | Date | undefined;
+}
 
 export default function DebugPage() {
   const [envVars, setEnvVars] = useState({
@@ -14,7 +27,7 @@ export default function DebugPage() {
     APP_URL: '',
   });
   
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [cookies, setCookies] = useState<{name: string, exists: boolean, length?: number}[]>([]);
@@ -113,8 +126,12 @@ export default function DebugPage() {
         // Also check cookies and localStorage
         checkCookies();
         checkLocalStorage();
-      } catch (err: any) {
-        setSessionError(err.message || 'Unknown error checking session');
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setSessionError(err.message);
+        } else {
+          setSessionError('An unknown error occurred while checking the session.');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -175,8 +192,12 @@ export default function DebugPage() {
       setTimeout(() => {
         window.location.href = '/?logging_out=true';
       }, 1000);
-    } catch (err: any) {
-      setSessionError(err.message || 'Error signing out');
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setSessionError(err.message);
+      } else {
+        setSessionError('An unknown error occurred during sign out.');
+      }
       setLogoutStatus(null);
     }
   };
@@ -210,8 +231,12 @@ export default function DebugPage() {
           setSessionAsCookies(data.session);
         }
       }
-    } catch (err: any) {
-      setSessionError(err.message || 'Error refreshing session');
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setSessionError(err.message);
+      } else {
+        setSessionError('An unknown error occurred while refreshing the session.');
+      }
     }
   };
   
@@ -258,7 +283,7 @@ export default function DebugPage() {
   };
   
   // Helper to set cookies
-  function setSessionAsCookies(session: any) {
+  function setSessionAsCookies(session: Session) {
     try {
       // Set the full session as cookie
       const sessionStr = JSON.stringify(session);
@@ -312,14 +337,19 @@ export default function DebugPage() {
   }
   
   // Helper to set cookies
-  function setCookie(name: string, value: string, options: { [key: string]: any } = {}) {
+  function setCookie(name: string, value: string, options: CookieOptions = {}) {
     let cookieString = `${name}=${value}`;
     
     for (const optionKey in options) {
       cookieString += `; ${optionKey}`;
       const optionValue = options[optionKey];
       if (optionValue !== true) {
-        cookieString += `=${optionValue}`;
+        // Handle Date object for expires
+        if (optionValue instanceof Date) {
+          cookieString += `=${optionValue.toUTCString()}`;
+        } else {
+          cookieString += `=${optionValue}`;
+        }
       }
     }
     
@@ -420,7 +450,7 @@ export default function DebugPage() {
               <p className="mb-2"><strong>User ID:</strong> {session.user?.id}</p>
               <p className="mb-2"><strong>Email:</strong> {session.user?.email}</p>
               <p className="mb-2"><strong>Token expires:</strong> {session.expires_at ? new Date(session.expires_at * 1000).toLocaleString() : 'unknown'}</p>
-              <p className="mb-2"><strong>Created at:</strong> {session.created_at ? new Date(session.created_at * 1000).toLocaleString() : 'unknown'}</p>
+              <p className="mb-2"><strong>User Created at:</strong> {session.user?.created_at ? new Date(session.user?.created_at).toLocaleString() : 'unknown'}</p>
               <details className="mt-4">
                 <summary className="cursor-pointer text-blue-600 hover:text-blue-800">Show Raw Session Data</summary>
                 <pre className="mt-2 bg-gray-100 p-4 rounded overflow-auto max-h-60 text-xs dark:bg-gray-900">
